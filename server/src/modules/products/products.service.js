@@ -1,121 +1,70 @@
-import { InventoryItem } from '../../models/InventoryItem.js';
 import { Product } from '../../models/Product.js';
 import { ApiError } from '../../utils/ApiError.js';
 
-const normalizeRecipe = async (recipe = []) => {
-  if (!Array.isArray(recipe)) {
-    throw new ApiError(400, 'Recipe must be an array');
+const INVENTORY_UNITS = new Set(['pcs', 'gr', 'ml']);
+
+const normalizeImageDataUrl = (imageDataUrl) => {
+  if (imageDataUrl === undefined) {
+    return undefined;
   }
 
-  if (recipe.length === 0) {
-    return [];
+  if (imageDataUrl === null || imageDataUrl === '') {
+    return null;
   }
 
-  const inventoryIds = recipe.map((item) => item.inventoryItem);
-  const inventoryItems = await InventoryItem.find({ _id: { $in: inventoryIds }, isActive: true });
-  const inventoryMap = new Map(inventoryItems.map((item) => [item.id, item]));
+  if (typeof imageDataUrl !== 'string' || !imageDataUrl.startsWith('data:image/')) {
+    throw new ApiError(400, 'Product image must be a valid image upload');
+  }
 
-  return recipe.map((item) => {
-    if (!inventoryMap.has(String(item.inventoryItem))) {
-      throw new ApiError(404, `Inventory item not found: ${item.inventoryItem}`);
-    }
-
-    if (!Number.isFinite(item.quantity) || item.quantity < 0) {
-      throw new ApiError(400, 'Recipe quantity must be zero or greater');
-    }
-
-    return {
-      inventoryItem: item.inventoryItem,
-      quantity: item.quantity
-    };
-  });
+  return imageDataUrl;
 };
 
-const attachAvailability = async (products) => {
-  const inventoryIds = [
-    ...new Set(
-      products.flatMap((product) =>
-        (product.recipe ?? []).map((recipeItem) => String(recipeItem.inventoryItem?._id ?? recipeItem.inventoryItem))
-      )
-    )
-  ];
-
-  if (inventoryIds.length === 0) {
-    return products.map((product) => ({
-      ...product.toObject(),
-      availability: {
-        isAvailable: true,
-        maxOrderQuantity: null,
-        reason: null
-      }
-    }));
+const normalizeInventoryUnit = (inventoryUnit) => {
+  if (inventoryUnit === undefined) {
+    return undefined;
   }
 
-  const inventoryItems = await InventoryItem.find({ _id: { $in: inventoryIds } });
-  const inventoryMap = new Map(inventoryItems.map((item) => [item.id, item]));
+  if (!inventoryUnit) {
+    return 'pcs';
+  }
 
-  return products.map((productDocument) => {
-    const product = productDocument.toObject();
+  if (!INVENTORY_UNITS.has(inventoryUnit)) {
+    throw new ApiError(400, 'Inventory unit must be pcs, gr, or ml');
+  }
 
-    if (!product.recipe?.length) {
-      return {
-        ...product,
-        availability: {
-          isAvailable: true,
-          maxOrderQuantity: null,
-          reason: null
-        }
-      };
+  return inventoryUnit;
+};
+
+const toProductPayload = (productDocument) => {
+  const product = productDocument.toObject();
+  const inventoryQuantity = product.trackInventory ? product.inventoryQuantity ?? 0 : null;
+  const maxOrderQuantity = product.trackInventory ? Math.floor(inventoryQuantity) : null;
+
+  return {
+    ...product,
+    availability: {
+      isAvailable: product.trackInventory ? inventoryQuantity > 0 : true,
+      maxOrderQuantity,
+      reason: product.trackInventory && inventoryQuantity <= 0 ? `Out of stock: ${product.name}` : null
     }
-
-    let maxOrderQuantity = Number.POSITIVE_INFINITY;
-    let reason = null;
-
-    for (const recipeItem of product.recipe) {
-      const inventoryId = String(recipeItem.inventoryItem?._id ?? recipeItem.inventoryItem);
-      const inventoryItem = inventoryMap.get(inventoryId);
-
-      if (!inventoryItem) {
-        maxOrderQuantity = 0;
-        reason = 'Missing inventory item';
-        break;
-      }
-
-      if (recipeItem.quantity <= 0) {
-        continue;
-      }
-
-      const producibleQuantity = Math.floor(inventoryItem.quantity / recipeItem.quantity);
-      maxOrderQuantity = Math.min(maxOrderQuantity, producibleQuantity);
-
-      if (producibleQuantity <= 0 && !reason) {
-        reason = `Out of stock: ${inventoryItem.name}`;
-      }
-    }
-
-    if (maxOrderQuantity === Number.POSITIVE_INFINITY) {
-      maxOrderQuantity = null;
-    }
-
-    return {
-      ...product,
-      availability: {
-        isAvailable: maxOrderQuantity === null ? true : maxOrderQuantity > 0,
-        maxOrderQuantity,
-        reason
-      }
-    };
-  });
+  };
 };
 
 export const listProducts = async ({ includeInactive = false } = {}) => {
   const filter = includeInactive ? {} : { isActive: true };
-  const products = await Product.find(filter).populate('recipe.inventoryItem', 'name unit quantity').sort({ name: 1 });
+  const products = await Product.find(filter).sort({ name: 1 });
 
-  return attachAvailability(products);
+  return products.map(toProductPayload);
 };
 
-export const createProduct = async ({ name, category = 'General', price, recipe = [] }) => {
+export const createProduct = async ({
+  name,
+  price,
+  imageDataUrl,
+  trackInventory = false,
+  inventoryQuantity = 0,
+  inventoryUnit = 'pcs'
+}) => {
   if (!name?.trim()) {
     throw new ApiError(400, 'Product name is required');
   }
@@ -124,13 +73,17 @@ export const createProduct = async ({ name, category = 'General', price, recipe 
     throw new ApiError(400, 'Product price must be zero or greater');
   }
 
-  const normalizedRecipe = await normalizeRecipe(recipe);
+  if (trackInventory && (!Number.isFinite(inventoryQuantity) || inventoryQuantity < 0)) {
+    throw new ApiError(400, 'Tracked inventory quantity must be zero or greater');
+  }
 
   return Product.create({
     name: name.trim(),
-    category: category.trim(),
     price,
-    recipe: normalizedRecipe
+    imageDataUrl: normalizeImageDataUrl(imageDataUrl) ?? null,
+    trackInventory: Boolean(trackInventory),
+    inventoryQuantity: trackInventory ? inventoryQuantity : 0,
+    inventoryUnit: normalizeInventoryUnit(inventoryUnit) ?? 'pcs'
   });
 };
 
@@ -142,11 +95,11 @@ export const updateProduct = async (productId, payload) => {
   }
 
   if (payload.name !== undefined) {
-    product.name = payload.name.trim();
-  }
+    if (!payload.name?.trim()) {
+      throw new ApiError(400, 'Product name is required');
+    }
 
-  if (payload.category !== undefined) {
-    product.category = payload.category.trim();
+    product.name = payload.name.trim();
   }
 
   if (payload.price !== undefined) {
@@ -157,17 +110,41 @@ export const updateProduct = async (productId, payload) => {
     product.price = payload.price;
   }
 
-  if (payload.recipe !== undefined) {
-    product.recipe = await normalizeRecipe(payload.recipe);
+  const normalizedImageDataUrl = normalizeImageDataUrl(payload.imageDataUrl);
+
+  if (normalizedImageDataUrl !== undefined) {
+    product.imageDataUrl = normalizedImageDataUrl;
+  }
+
+  if (payload.trackInventory !== undefined) {
+    product.trackInventory = Boolean(payload.trackInventory);
+  }
+
+  if (payload.inventoryQuantity !== undefined) {
+    if (!Number.isFinite(payload.inventoryQuantity) || payload.inventoryQuantity < 0) {
+      throw new ApiError(400, 'Tracked inventory quantity must be zero or greater');
+    }
+
+    product.inventoryQuantity = payload.inventoryQuantity;
+  }
+
+  const normalizedInventoryUnit = normalizeInventoryUnit(payload.inventoryUnit);
+
+  if (normalizedInventoryUnit !== undefined) {
+    product.inventoryUnit = normalizedInventoryUnit;
   }
 
   if (payload.isActive !== undefined) {
     product.isActive = payload.isActive;
   }
 
+  if (!product.trackInventory) {
+    product.inventoryQuantity = 0;
+  }
+
   await product.save();
 
-  return Product.findById(product.id).populate('recipe.inventoryItem', 'name unit');
+  return product;
 };
 
 export const deleteProduct = async (productId) => {

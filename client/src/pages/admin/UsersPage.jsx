@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog.jsx';
 import { FormModal } from '../../components/common/FormModal.jsx';
-import { apiRequest } from '../../lib/api.js';
+import { IconButton } from '../../components/common/IconButton.jsx';
 import { useToast } from '../../hooks/useToast.js';
+import { apiRequest } from '../../lib/api.js';
 
 const defaultForm = {
   fullName: '',
@@ -16,7 +18,9 @@ export function UsersPage() {
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState(defaultForm);
   const [editingUserId, setEditingUserId] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -49,9 +53,7 @@ export function UsersPage() {
   };
 
   const handleOpenCreate = () => {
-    setForm(defaultForm);
-    setEditingUserId(null);
-    setErrorMessage('');
+    closeModal();
     setIsModalOpen(true);
   };
 
@@ -132,24 +134,24 @@ export function UsersPage() {
     }
   };
 
-  const handleDelete = async (userId) => {
-    const confirmed = window.confirm('Delete this user?');
-
-    if (!confirmed) {
+  const handleDelete = async () => {
+    if (!deletingUser) {
       return;
     }
 
+    setIsDeleting(true);
+
     try {
-      const deletedUser = users.find((user) => user.id === userId);
-      await apiRequest(`/users/${userId}`, {
+      await apiRequest(`/users/${deletingUser.id}`, {
         method: 'DELETE'
       });
       await loadUsers();
       showToast({
         title: 'User deleted',
-        message: `${deletedUser?.fullName ?? 'The user'} has been removed.`,
+        message: `${deletingUser.fullName} has been removed.`,
         type: 'success'
       });
+      setDeletingUser(null);
     } catch (error) {
       setErrorMessage(error.message);
       showToast({
@@ -157,6 +159,8 @@ export function UsersPage() {
         message: error.message,
         type: 'error'
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -167,19 +171,19 @@ export function UsersPage() {
           <p className="eyebrow">Admin</p>
           <h2>User Management</h2>
         </div>
-        <div className="header-actions">
-          <p className="muted">Admin creates and maintains cashier and admin accounts from one place.</p>
-          <button className="primary-button" onClick={handleOpenCreate} type="button">
-            Add User
-          </button>
-        </div>
+        <p className="muted">Admin creates and maintains cashier and admin accounts from one place.</p>
       </div>
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}
 
       <div className="panel">
         <div className="panel-heading">
-          <h3>User List</h3>
+          <div className="panel-heading-left">
+            <button className="primary-button" onClick={handleOpenCreate} type="button">
+              Add User
+            </button>
+            <h3>User List</h3>
+          </div>
           <span className="panel-count">{users.length} total</span>
         </div>
         {isLoading ? <p>Loading users...</p> : null}
@@ -190,16 +194,17 @@ export function UsersPage() {
               <div>
                 <strong>{user.fullName}</strong>
                 <p className="muted compact-text">
-                  @{user.username} · {user.role} · {user.isActive ? 'active' : 'inactive'}
+                  @{user.username} | {user.role} | {user.isActive ? 'active' : 'inactive'}
                 </p>
               </div>
               <div className="row-actions">
-                <button className="secondary-button small-button" onClick={() => handleEdit(user)} type="button">
-                  Edit
-                </button>
-                <button className="ghost-button small-button" onClick={() => handleDelete(user.id)} type="button">
-                  Delete
-                </button>
+                <IconButton icon="edit" label="Edit user" onClick={() => handleEdit(user)} />
+                <IconButton
+                  icon="delete"
+                  label="Delete user"
+                  onClick={() => setDeletingUser(user)}
+                  variant="danger"
+                />
               </div>
             </article>
           ))}
@@ -247,13 +252,31 @@ export function UsersPage() {
               <option value="cashier">Cashier</option>
             </select>
           </label>
-          <label className="checkbox-field">
-            <input checked={form.isActive} name="isActive" onChange={handleChange} type="checkbox" />
+          <label className="toggle-field">
             <span>Active account</span>
+            <button
+              aria-pressed={form.isActive}
+              className={`toggle-switch${form.isActive ? ' toggle-switch-active' : ''}`}
+              onClick={() => setForm((current) => ({ ...current, isActive: !current.isActive }))}
+              type="button"
+            >
+              <span />
+            </button>
           </label>
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
         </form>
       </FormModal>
+
+      <ConfirmDialog
+        confirmLabel="Yes"
+        isConfirming={isDeleting}
+        isOpen={Boolean(deletingUser)}
+        message={`Delete ${deletingUser?.fullName ?? 'this user'}?`}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={handleDelete}
+        title="Delete User"
+      />
     </section>
   );
 }
+

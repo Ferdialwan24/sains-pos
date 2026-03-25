@@ -1,63 +1,34 @@
-import { InventoryItem } from '../../models/InventoryItem.js';
 import { Product } from '../../models/Product.js';
 import { ApiError } from '../../utils/ApiError.js';
 
 export const listInventoryItems = async () => {
-  return InventoryItem.find().sort({ name: 1 });
+  return Product.find({ trackInventory: true, isActive: true })
+    .select('name imageDataUrl inventoryQuantity inventoryUnit isActive')
+    .sort({ name: 1 });
 };
 
-export const createInventoryItem = async ({ name, unit, quantity = 0 }) => {
-  if (!name?.trim() || !unit?.trim()) {
-    throw new ApiError(400, 'Item name and unit are required');
+export const restockInventoryItem = async ({ productId, quantity, unit }) => {
+  if (!productId) {
+    throw new ApiError(400, 'Tracked product is required');
   }
 
-  return InventoryItem.create({
-    name: name.trim(),
-    unit: unit.trim(),
-    quantity
-  });
-};
-
-export const updateInventoryItem = async (itemId, payload) => {
-  const item = await InventoryItem.findById(itemId);
-
-  if (!item) {
-    throw new ApiError(404, 'Inventory item not found');
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    throw new ApiError(400, 'Restock quantity must be greater than zero');
   }
 
-  if (payload.name !== undefined) {
-    item.name = payload.name.trim();
+  if (!['pcs', 'gr', 'ml'].includes(unit)) {
+    throw new ApiError(400, 'Inventory unit must be pcs, gr, or ml');
   }
 
-  if (payload.unit !== undefined) {
-    item.unit = payload.unit.trim();
+  const product = await Product.findById(productId);
+
+  if (!product || !product.trackInventory) {
+    throw new ApiError(404, 'Tracked product not found');
   }
 
-  if (payload.quantity !== undefined) {
-    item.quantity = payload.quantity;
-  }
+  product.inventoryQuantity = (product.inventoryQuantity ?? 0) + quantity;
+  product.inventoryUnit = unit;
+  await product.save();
 
-  if (payload.isActive !== undefined) {
-    item.isActive = payload.isActive;
-  }
-
-  await item.save();
-
-  return item;
-};
-
-export const deleteInventoryItem = async (itemId) => {
-  const item = await InventoryItem.findById(itemId);
-
-  if (!item) {
-    throw new ApiError(404, 'Inventory item not found');
-  }
-
-  const linkedProduct = await Product.findOne({ 'recipe.inventoryItem': itemId }).select('name');
-
-  if (linkedProduct) {
-    throw new ApiError(400, `Inventory item is used in recipe for ${linkedProduct.name}`);
-  }
-
-  await item.deleteOne();
+  return product;
 };

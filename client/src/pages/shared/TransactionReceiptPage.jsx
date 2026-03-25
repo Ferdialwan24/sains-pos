@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { downloadReceiptPdf } from '../../lib/downloads.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency, formatDateTime } from '../../lib/format.js';
 
@@ -36,8 +37,13 @@ export function TransactionReceiptPage() {
           <Link className="secondary-button" to="/cashier/transactions">
             Back
           </Link>
-          <button className="primary-button" onClick={() => window.print()} type="button">
-            Print
+          <button
+            className="primary-button"
+            disabled={!transaction}
+            onClick={() => downloadReceiptPdf(transaction)}
+            type="button"
+          >
+            Download PDF
           </button>
         </div>
       </div>
@@ -95,13 +101,10 @@ export function TransactionReceiptPage() {
               <span>Total</span>
               <strong>{formatCurrency(transaction.totalAmount)}</strong>
             </div>
-
-            {transaction.cancelReason ? (
-              <p className="form-error">Cancel reason: {transaction.cancelReason}</p>
-            ) : null}
           </>
         ) : null}
       </div>
     </section>
   );
 }
+

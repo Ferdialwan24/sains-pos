@@ -1,170 +1,126 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../../lib/api.js';
-import { formatCurrency } from '../../lib/format.js';
+import { formatCompactCurrency } from '../../lib/format.js';
+
+const rangeOptions = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'yearly', label: 'Yearly' }
+];
 
 export function DashboardPage() {
-  const [dateRange, setDateRange] = useState({
-    from: '',
-    to: ''
+  const [range, setRange] = useState('daily');
+  const [analytics, setAnalytics] = useState({
+    salesSeries: [],
+    topProducts: []
   });
-  const [stats, setStats] = useState({
-    activeTables: 0,
-    products: 0,
-    todayRevenue: 0,
-    transactions: 0,
-    paidTransactions: 0,
-    canceledTransactions: 0,
-    paymentMethods: {},
-    recentTransactions: []
-  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const searchParams = new URLSearchParams();
-        if (dateRange.from) {
-          searchParams.set('from', dateRange.from);
-        }
-        if (dateRange.to) {
-          searchParams.set('to', dateRange.to);
-        }
-        const summaryQuery = searchParams.toString() ? `?${searchParams.toString()}` : '';
-        const [tablesResponse, productsResponse, transactionsResponse, summaryResponse] = await Promise.all([
-          apiRequest('/tables'),
-          apiRequest('/products?includeInactive=true'),
-          apiRequest(summaryQuery ? `/transactions${summaryQuery}` : '/transactions'),
-          apiRequest(`/transactions/summary${summaryQuery}`)
-        ]);
+    const loadAnalytics = async () => {
+      setIsLoading(true);
 
-        setStats({
-          activeTables: tablesResponse.tables.filter((table) => table.status === 'active').length,
-          products: productsResponse.products.length,
-          todayRevenue: summaryResponse.summary.todayRevenue,
-          transactions: transactionsResponse.transactions.length,
-          paidTransactions: summaryResponse.summary.paidTransactions,
-          canceledTransactions: summaryResponse.summary.canceledTransactions,
-          paymentMethods: summaryResponse.summary.paymentMethods,
-          recentTransactions: summaryResponse.summary.recentTransactions
-        });
+      try {
+        const response = await apiRequest(`/transactions/analytics?range=${range}`);
+        setAnalytics(response.analytics);
       } catch (_error) {
-        setStats({
-          activeTables: 0,
-          products: 0,
-          todayRevenue: 0,
-          transactions: 0,
-          paidTransactions: 0,
-          canceledTransactions: 0,
-          paymentMethods: {},
-          recentTransactions: []
+        setAnalytics({
+          salesSeries: [],
+          topProducts: []
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadDashboard();
-  }, [dateRange.from, dateRange.to]);
+    loadAnalytics();
+  }, [range]);
+
+  const maxSalesValue = useMemo(
+    () => Math.max(...analytics.salesSeries.map((point) => point.totalSales), 1),
+    [analytics.salesSeries]
+  );
+
+  const maxProductValue = useMemo(
+    () => Math.max(...analytics.topProducts.map((item) => item.quantity), 1),
+    [analytics.topProducts]
+  );
 
   return (
     <section className="page">
       <div className="page-header">
         <div>
           <p className="eyebrow">Admin</p>
-          <h2>Business Dashboard</h2>
+          <h2>Sales Dashboard</h2>
         </div>
-        <p className="muted">Daily income and product sales summary will live here.</p>
-      </div>
-
-      <div className="panel">
-        <div className="filters-row">
-          <label className="field inline-field">
-            <span>From</span>
-            <input
-              onChange={(event) => setDateRange((current) => ({ ...current, from: event.target.value }))}
-              type="date"
-              value={dateRange.from}
-            />
-          </label>
-          <label className="field inline-field">
-            <span>To</span>
-            <input
-              onChange={(event) => setDateRange((current) => ({ ...current, to: event.target.value }))}
-              type="date"
-              value={dateRange.to}
-            />
-          </label>
+        <div className="range-switch">
+          {rangeOptions.map((option) => (
+            <button
+              key={option.value}
+              className={`range-switch-button${range === option.value ? ' range-switch-button-active' : ''}`}
+              onClick={() => setRange(option.value)}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="stats-grid">
-        <article className="stat-card">
-          <span>Today Revenue</span>
-          <strong>{formatCurrency(stats.todayRevenue)}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Total Transactions</span>
-          <strong>{stats.transactions}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Registered Products</span>
-          <strong>{stats.products}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Active Tables</span>
-          <strong>{stats.activeTables}</strong>
-        </article>
-      </div>
-
-      <div className="two-column-grid">
-        <div className="panel">
-          <h3>Transaction Status</h3>
-          <div className="simple-list">
-            <article className="list-row">
-              <span>Paid</span>
-              <strong>{stats.paidTransactions}</strong>
-            </article>
-            <article className="list-row">
-              <span>Cancelled</span>
-              <strong>{stats.canceledTransactions}</strong>
-            </article>
+      <div className="dashboard-grid">
+        <article className="panel chart-panel">
+          <div className="panel-heading">
+            <h3>Sales Graph</h3>
+            <span className="panel-count">{range}</span>
           </div>
-        </div>
-
-        <div className="panel">
-          <h3>Payment Methods</h3>
-          <div className="simple-list">
-            {Object.keys(stats.paymentMethods).length === 0 ? <p>No paid transactions yet.</p> : null}
-            {Object.entries(stats.paymentMethods).map(([method, total]) => (
-              <article key={method} className="list-row">
-                <span className="capitalize-text">{method}</span>
-                <strong>{formatCurrency(total)}</strong>
+          {isLoading ? <p>Loading sales chart...</p> : null}
+          {!isLoading && analytics.salesSeries.length === 0 ? <p>No paid sales data yet.</p> : null}
+          <div className="chart-bars">
+            {analytics.salesSeries.map((point) => (
+              <article key={point.label} className="chart-bar-column">
+                <strong>{formatCompactCurrency(point.totalSales)}</strong>
+                <div className="chart-bar-track">
+                  <div
+                    className="chart-bar-fill"
+                    style={{
+                      height: `${(point.totalSales / maxSalesValue) * 100}%`
+                    }}
+                  />
+                </div>
+                <span>{point.label}</span>
               </article>
             ))}
           </div>
-        </div>
-      </div>
+        </article>
 
-      <div className="panel">
-        <h3>Recent Transactions</h3>
-        <div className="simple-list">
-          {stats.recentTransactions.length === 0 ? <p>No transactions yet.</p> : null}
-          {stats.recentTransactions.map((transaction) => (
-            <article key={transaction._id} className="list-row list-row-stack">
-              <div>
-                <strong>{transaction.invoiceNo}</strong>
-                <p className="muted compact-text">
-                  Table {transaction.tableNumber} | {transaction.customerName} | {transaction.status}
-                </p>
-              </div>
-              <div className="row-actions">
-                <span>{formatCurrency(transaction.totalAmount)}</span>
-                <Link className="secondary-button small-button" to={`/transactions/${transaction._id}`}>
-                  Receipt
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
+        <article className="panel chart-panel">
+          <div className="panel-heading">
+            <h3>Top Products</h3>
+            <span className="panel-count">{range}</span>
+          </div>
+          {isLoading ? <p>Loading product chart...</p> : null}
+          {!isLoading && analytics.topProducts.length === 0 ? <p>No product sales yet.</p> : null}
+          <div className="ranked-bars">
+            {analytics.topProducts.map((item) => (
+              <article key={item.productId} className="ranked-bar-row">
+                <div>
+                  <strong>{item.name}</strong>
+                  <p className="muted compact-text">{item.quantity} sold</p>
+                </div>
+                <div className="ranked-bar-track">
+                  <div
+                    className="ranked-bar-fill"
+                    style={{
+                      width: `${(item.quantity / maxProductValue) * 100}%`
+                    }}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        </article>
       </div>
     </section>
   );
 }
+

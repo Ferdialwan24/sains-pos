@@ -5,6 +5,7 @@ import { useToast } from '../../hooks/useToast.js';
 const navigationByRole = {
   admin: [
     { label: 'Dashboard', path: '/admin/dashboard' },
+    { label: 'Sales Reports', path: '/admin/reports' },
     { label: 'Users', path: '/admin/users' },
     { label: 'Tables', path: '/admin/tables' },
     { label: 'Products', path: '/admin/products' },

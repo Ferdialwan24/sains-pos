@@ -152,6 +152,13 @@ a {
   font-size: 0.9rem;
 }
 
+.panel-heading-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .table-grid,
 .stats-grid {
   display: grid;
@@ -420,6 +427,28 @@ a {
   padding: 8px 12px;
 }
 
+.icon-button {
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.icon-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-button-danger {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.2);
+}
+
 .form-error {
   margin: 0;
   color: #b91c1c;
@@ -460,6 +489,41 @@ a {
   margin: 4px 0 0;
 }
 
+.toggle-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.toggle-switch {
+  width: 54px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: #cbd5e1;
+  padding: 4px;
+  cursor: pointer;
+  transition: background 180ms ease;
+}
+
+.toggle-switch span {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 180ms ease;
+}
+
+.toggle-switch-active {
+  background: #0ea5e9;
+}
+
+.toggle-switch-active span {
+  transform: translateX(22px);
+}
+
 .capitalize-text {
   text-transform: capitalize;
 }
@@ -481,6 +545,16 @@ a {
 .pill-active {
   background: #ffedd5;
   color: #9a3412;
+}
+
+.pill-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pill-cancel {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .button-row {
@@ -516,6 +590,232 @@ a {
 .product-card-disabled {
   opacity: 0.65;
   border-color: rgba(185, 28, 28, 0.16);
+}
+
+.product-list-grid,
+.transaction-list,
+.inventory-list,
+.report-table {
+  display: grid;
+  gap: 16px;
+}
+
+.product-list-card,
+.inventory-row,
+.transaction-card,
+.report-row {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.product-list-card {
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.product-list-image,
+.inventory-row-image {
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #e2e8f0;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.product-list-image img,
+.inventory-row-image img,
+.upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-list-copy,
+.inventory-row-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.upload-field {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 1px dashed #94a3b8;
+  border-radius: 14px;
+  cursor: pointer;
+  background: #f8fafc;
+}
+
+.upload-field input {
+  display: none;
+}
+
+.upload-preview {
+  display: grid;
+  gap: 12px;
+  width: 180px;
+}
+
+.upload-preview img {
+  width: 180px;
+  height: 180px;
+  border-radius: 18px;
+}
+
+.inventory-toolbar {
+  display: grid;
+  gap: 16px;
+}
+
+.inventory-toolbar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.inventory-row {
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+}
+
+.range-switch {
+  display: inline-flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.range-switch-button {
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: #526071;
+}
+
+.range-switch-button-active {
+  background: #0ea5e9;
+  color: #03111e;
+  font-weight: 700;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.chart-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.chart-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+  gap: 12px;
+  align-items: end;
+  min-height: 280px;
+}
+
+.chart-bar-column {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  min-height: 240px;
+}
+
+.chart-bar-column strong {
+  font-size: 0.82rem;
+  color: #0f172a;
+}
+
+.chart-bar-track {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #e0f2fe 0%, #f8fafc 100%);
+  overflow: hidden;
+}
+
+.chart-bar-fill {
+  width: 100%;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #0ea5e9 0%, #0369a1 100%);
+}
+
+.ranked-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.ranked-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.ranked-bar-track {
+  height: 16px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.ranked-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fb923c 0%, #f97316 100%);
+}
+
+.transaction-card {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.transaction-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.transaction-amount {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.transaction-card-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  color: #526071;
+}
+
+.transaction-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.report-row {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
 }
 
 .receipt-panel {
@@ -608,6 +908,18 @@ a {
     justify-items: stretch;
   }
 
+  .panel-heading,
+  .panel-heading-left,
+  .transaction-card-top,
+  .transaction-amount,
+  .ranked-bar-row,
+  .product-list-card,
+  .inventory-row,
+  .report-row {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
   .button-row {
     flex-direction: column;
   }
@@ -632,6 +944,11 @@ a {
 
   .modal-body {
     padding: 16px;
+  }
+
+  .range-switch {
+    display: grid;
+    width: 100%;
   }
 }
 

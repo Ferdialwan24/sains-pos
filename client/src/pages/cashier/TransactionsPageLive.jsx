@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../../lib/api.js';
-import { formatCurrency } from '../../lib/format.js';
+import { formatCurrency, formatDateTime } from '../../lib/format.js';
 
 export function TransactionsPageLive() {
   const [transactions, setTransactions] = useState([]);
@@ -15,6 +15,8 @@ export function TransactionsPageLive() {
 
   useEffect(() => {
     const loadTransactions = async () => {
+      setIsLoading(true);
+
       try {
         const searchParams = new URLSearchParams();
         if (statusFilter) {
@@ -48,13 +50,13 @@ export function TransactionsPageLive() {
           <p className="eyebrow">Cashier</p>
           <h2>Transactions</h2>
         </div>
-        <p className="muted">Only final transactions with status paid or cancel will appear here.</p>
+        <p className="muted">Final transactions are shown here with payment and cashier details.</p>
       </div>
 
       <div className="panel">
         <div className="filters-row">
           <label className="field inline-field">
-            <span>Status Filter</span>
+            <span>Status</span>
             <select onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
               <option value="">All</option>
               <option value="paid">Paid</option>
@@ -79,28 +81,40 @@ export function TransactionsPageLive() {
           </label>
         </div>
         {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-        {isLoading ? <p>Loading transactions...</p> : null}
-        {!isLoading && transactions.length === 0 ? <p>No transactions yet.</p> : null}
-        <div className="simple-list">
-          {transactions.map((transaction) => (
-            <article key={transaction._id} className="list-row list-row-stack">
+      </div>
+
+      <div className="transaction-list">
+        {isLoading ? <div className="panel">Loading transactions...</div> : null}
+        {!isLoading && transactions.length === 0 ? <div className="panel">No transactions yet.</div> : null}
+        {transactions.map((transaction) => (
+          <article key={transaction._id} className="transaction-card">
+            <div className="transaction-card-top">
               <div>
                 <strong>{transaction.invoiceNo}</strong>
-                <p className="muted compact-text">
-                  Table {transaction.tableNumber} | {transaction.customerName} | {transaction.status} |{' '}
-                  {transaction.paymentMethod}
-                </p>
+                <p className="muted compact-text">{formatDateTime(transaction.createdAt)}</p>
               </div>
-              <div className="row-actions">
-                <span>{formatCurrency(transaction.totalAmount)}</span>
-                <Link className="secondary-button small-button" to={`/transactions/${transaction._id}`}>
-                  Receipt
-                </Link>
+              <div className="transaction-amount">
+                <span className={`pill ${transaction.status === 'paid' ? 'pill-success' : 'pill-cancel'}`}>
+                  {transaction.status}
+                </span>
+                <strong>{formatCurrency(transaction.totalAmount)}</strong>
               </div>
-            </article>
-          ))}
-        </div>
+            </div>
+            <div className="transaction-card-body">
+              <span>Customer: {transaction.customerName}</span>
+              <span>Table: {transaction.tableNumber}</span>
+              <span>Payment: {transaction.paymentMethod}</span>
+              <span>Served by: {transaction.cashier?.fullName ?? '-'}</span>
+            </div>
+            <div className="transaction-card-actions">
+              <Link className="secondary-button small-button" to={`/transactions/${transaction._id}`}>
+                Receipt
+              </Link>
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );
 }
+

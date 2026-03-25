@@ -1,6 +1,5 @@
 import { TABLE_STATUS } from '../../constants/tableStatus.js';
 import { TRANSACTION_STATUS } from '../../constants/transactionStatus.js';
-import { InventoryItem } from '../../models/InventoryItem.js';
 import { Product } from '../../models/Product.js';
 import { Table } from '../../models/Table.js';
 import { Transaction } from '../../models/Transaction.js';
@@ -86,26 +85,24 @@ const getRequiredInventory = async (orderItems) => {
       throw new ApiError(404, `Product not found during checkout: ${orderItem.product}`);
     }
 
-    for (const recipeItem of product.recipe) {
-      const key = String(recipeItem.inventoryItem);
-      const currentQuantity = usageMap.get(key) ?? 0;
-      usageMap.set(key, currentQuantity + recipeItem.quantity * orderItem.quantity);
+    if (!product.trackInventory) {
+      continue;
     }
+
+    const key = String(product.id);
+    const currentQuantity = usageMap.get(key) ?? 0;
+    usageMap.set(key, currentQuantity + orderItem.quantity);
   }
 
-  const inventoryIds = [...usageMap.keys()];
-  const inventoryItems = await InventoryItem.find({ _id: { $in: inventoryIds } });
-  const inventoryMap = new Map(inventoryItems.map((item) => [item.id, item]));
+  for (const [productId, requiredQuantity] of usageMap.entries()) {
+    const product = productMap.get(productId);
 
-  for (const [inventoryId, requiredQuantity] of usageMap.entries()) {
-    const inventoryItem = inventoryMap.get(inventoryId);
-
-    if (!inventoryItem) {
-      throw new ApiError(404, `Inventory item not found: ${inventoryId}`);
+    if (!product) {
+      throw new ApiError(404, `Product not found: ${productId}`);
     }
 
-    if (inventoryItem.quantity < requiredQuantity) {
-      throw new ApiError(409, `Insufficient stock for ${inventoryItem.name}`);
+    if ((product.inventoryQuantity ?? 0) < requiredQuantity) {
+      throw new ApiError(409, `Insufficient stock for ${product.name}`);
     }
   }
 
@@ -276,10 +273,10 @@ export const checkoutTableBill = async (tableId, { status, paymentMethod, cancel
   if (checkoutStatus === TRANSACTION_STATUS.PAID) {
     const requiredInventory = await getRequiredInventory(table.activeOrder.items);
 
-    for (const [inventoryId, requiredQuantity] of requiredInventory.entries()) {
-      await InventoryItem.findByIdAndUpdate(inventoryId, {
+    for (const [productId, requiredQuantity] of requiredInventory.entries()) {
+      await Product.findByIdAndUpdate(productId, {
         $inc: {
-          quantity: -requiredQuantity
+          inventoryQuantity: -requiredQuantity
         }
       });
     }

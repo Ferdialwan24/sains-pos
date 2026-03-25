@@ -1,24 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FormModal } from '../../components/common/FormModal.jsx';
-import { apiRequest } from '../../lib/api.js';
 import { useToast } from '../../hooks/useToast.js';
+import { apiRequest } from '../../lib/api.js';
 
 const defaultForm = {
-  name: '',
+  search: '',
+  productId: '',
   quantity: '',
-  unit: ''
+  unit: 'pcs'
 };
 
 export function InventoryPage() {
   const { showToast } = useToast();
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(defaultForm);
-  const [editingItemId, setEditingItemId] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const formTitle = useMemo(() => (editingItemId ? 'Edit Inventory Item' : 'Add Inventory Item'), [editingItemId]);
 
   const loadItems = async () => {
     setIsLoading(true);
@@ -38,37 +35,11 @@ export function InventoryPage() {
     loadItems();
   }, []);
 
-  const closeModal = () => {
-    setForm(defaultForm);
-    setEditingItemId(null);
-    setIsModalOpen(false);
-    setErrorMessage('');
-  };
-
-  const handleOpenCreate = () => {
-    setForm(defaultForm);
-    setEditingItemId(null);
-    setErrorMessage('');
-    setIsModalOpen(true);
-  };
-
-  const handleChange = (event) => {
-    setForm((currentForm) => ({
-      ...currentForm,
-      [event.target.name]: event.target.value
-    }));
-  };
-
-  const handleEdit = (item) => {
-    setEditingItemId(item._id);
-    setForm({
-      name: item.name,
-      quantity: String(item.quantity),
-      unit: item.unit
-    });
-    setErrorMessage('');
-    setIsModalOpen(true);
-  };
+  const filteredItems = useMemo(
+    () =>
+      items.filter((item) => item.name.toLowerCase().includes(form.search.trim().toLowerCase())),
+    [form.search, items]
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -76,40 +47,25 @@ export function InventoryPage() {
     setErrorMessage('');
 
     try {
-      const payload = {
-        name: form.name,
-        quantity: Number(form.quantity),
-        unit: form.unit
-      };
-
-      if (editingItemId) {
-        await apiRequest(`/inventory/${editingItemId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload)
-        });
-        showToast({
-          title: 'Inventory updated',
-          message: `${payload.name} has been updated.`,
-          type: 'success'
-        });
-      } else {
-        await apiRequest('/inventory', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        showToast({
-          title: 'Inventory item created',
-          message: `${payload.name} has been added to stock.`,
-          type: 'success'
-        });
-      }
-
-      closeModal();
+      await apiRequest('/inventory/restock', {
+        method: 'POST',
+        body: JSON.stringify({
+          productId: form.productId,
+          quantity: Number(form.quantity),
+          unit: form.unit
+        })
+      });
+      showToast({
+        title: 'Stock updated',
+        message: 'Product stock has been increased.',
+        type: 'success'
+      });
+      setForm(defaultForm);
       await loadItems();
     } catch (error) {
       setErrorMessage(error.message);
       showToast({
-        title: 'Inventory save failed',
+        title: 'Stock update failed',
         message: error.message,
         type: 'error'
       });
@@ -118,112 +74,96 @@ export function InventoryPage() {
     }
   };
 
-  const handleDelete = async (itemId) => {
-    const confirmed = window.confirm('Delete this inventory item?');
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const deletedItem = items.find((item) => item._id === itemId);
-      await apiRequest(`/inventory/${itemId}`, {
-        method: 'DELETE'
-      });
-
-      await loadItems();
-      showToast({
-        title: 'Inventory item deleted',
-        message: `${deletedItem?.name ?? 'The inventory item'} has been removed.`,
-        type: 'success'
-      });
-    } catch (error) {
-      setErrorMessage(error.message);
-      showToast({
-        title: 'Inventory delete failed',
-        message: error.message,
-        type: 'error'
-      });
-    }
-  };
-
   return (
     <section className="page">
       <div className="page-header">
         <div>
           <p className="eyebrow">Admin</p>
-          <h2>Manage Inventory</h2>
+          <h2>Inventory</h2>
         </div>
-        <div className="header-actions">
-          <p className="muted">Current stock only, without stock movement log, as agreed for the MVP.</p>
-          <button className="primary-button" onClick={handleOpenCreate} type="button">
-            Add Inventory
-          </button>
-        </div>
+        <p className="muted">Only products with active inventory tracking appear here.</p>
       </div>
 
-      {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}
+      <form className="panel inventory-toolbar" onSubmit={handleSubmit}>
+        <div className="panel-heading">
+          <h3>Add Stock</h3>
+          <span className="panel-count">{items.length} tracked products</span>
+        </div>
+        <div className="inventory-toolbar-grid">
+          <label className="field">
+            <span>Search product</span>
+            <input
+              onChange={(event) => setForm((currentForm) => ({ ...currentForm, search: event.target.value }))}
+              placeholder="Search tracked product"
+              value={form.search}
+            />
+          </label>
+          <label className="field">
+            <span>Matched product</span>
+            <select
+              onChange={(event) => setForm((currentForm) => ({ ...currentForm, productId: event.target.value }))}
+              required
+              value={form.productId}
+            >
+              <option value="">Select product</option>
+              {filteredItems.map((item) => (
+                <option key={item._id} value={item._id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Quantity</span>
+            <input
+              min="0"
+              onChange={(event) => setForm((currentForm) => ({ ...currentForm, quantity: event.target.value }))}
+              required
+              type="number"
+              value={form.quantity}
+            />
+          </label>
+          <label className="field">
+            <span>Unit</span>
+            <select onChange={(event) => setForm((currentForm) => ({ ...currentForm, unit: event.target.value }))} value={form.unit}>
+              <option value="pcs">pcs</option>
+              <option value="gr">gr</option>
+              <option value="ml">ml</option>
+            </select>
+          </label>
+        </div>
+        {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+        <div className="button-row">
+          <button className="primary-button" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Updating...' : 'Add Stock'}
+          </button>
+        </div>
+      </form>
 
       <div className="panel">
         <div className="panel-heading">
-          <h3>Inventory List</h3>
-          <span className="panel-count">{items.length} total</span>
+          <h3>Tracked Products</h3>
+          <span className="panel-count">{filteredItems.length} visible</span>
         </div>
         {isLoading ? <p>Loading inventory...</p> : null}
-        {!isLoading && items.length === 0 ? <p>No inventory items yet.</p> : null}
-        <div className="simple-list">
-          {items.map((item) => (
-            <article key={item._id} className="list-row list-row-stack">
-              <div>
-                <strong>{item.name}</strong>
-                <p className="muted compact-text">
-                  {item.quantity} {item.unit}
-                </p>
+        {!isLoading && items.length === 0 ? <p>No tracked products yet. Enable inventory tracking from Products.</p> : null}
+        <div className="inventory-list">
+          {filteredItems.map((item) => (
+            <article key={item._id} className="inventory-row">
+              <div className="inventory-row-image">
+                {item.imageDataUrl ? <img alt={item.name} src={item.imageDataUrl} /> : <span>No image</span>}
               </div>
-              <div className="row-actions">
-                <button className="secondary-button small-button" onClick={() => handleEdit(item)} type="button">
-                  Edit
-                </button>
-                <button className="ghost-button small-button" onClick={() => handleDelete(item._id)} type="button">
-                  Delete
-                </button>
+              <div className="inventory-row-copy">
+                <strong>{item.name}</strong>
+                <span>
+                  {item.inventoryQuantity} {item.inventoryUnit}
+                </span>
               </div>
             </article>
           ))}
         </div>
       </div>
-
-      <FormModal
-        footer={
-          <>
-            <button className="secondary-button" onClick={closeModal} type="button">
-              Cancel
-            </button>
-            <button className="primary-button" disabled={isSubmitting} form="inventory-form" type="submit">
-              {isSubmitting ? 'Saving...' : editingItemId ? 'Update Item' : 'Create Item'}
-            </button>
-          </>
-        }
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        title={formTitle}
-      >
-        <form className="form-grid" id="inventory-form" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Item Name</span>
-            <input name="name" onChange={handleChange} required value={form.name} />
-          </label>
-          <label className="field">
-            <span>Quantity</span>
-            <input min="0" name="quantity" onChange={handleChange} required type="number" value={form.quantity} />
-          </label>
-          <label className="field">
-            <span>Unit</span>
-            <input name="unit" onChange={handleChange} placeholder="pcs, gram, ml" required value={form.unit} />
-          </label>
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-        </form>
-      </FormModal>
     </section>
   );
 }
+

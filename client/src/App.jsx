@@ -5,6 +5,7 @@ import { useAuth } from './hooks/useAuth.js';
 import { DashboardPage } from './pages/admin/DashboardPage.jsx';
 import { InventoryPage } from './pages/admin/InventoryPage.jsx';
 import { ProductsPage } from './pages/admin/ProductsPage.jsx';
+import { SalesReportsPage } from './pages/admin/SalesReportsPage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { TablesPage } from './pages/admin/TablesPage.jsx';
 import { UsersPage } from './pages/admin/UsersPage.jsx';
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/admin/tables" element={<TablesPage />} />
             <Route path="/admin/products" element={<ProductsPage />} />
             <Route path="/admin/inventory" element={<InventoryPage />} />
+            <Route path="/admin/reports" element={<SalesReportsPage />} />
           </Route>
         </Route>
       </Route>

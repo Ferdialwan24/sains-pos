@@ -1,23 +1,5 @@
 import mongoose from 'mongoose';
 
-const recipeItemSchema = new mongoose.Schema(
-  {
-    inventoryItem: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'InventoryItem',
-      required: true
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 0
-    }
-  },
-  {
-    _id: false
-  }
-);
-
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -25,19 +7,28 @@ const productSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
-    category: {
-      type: String,
-      trim: true,
-      default: 'General'
-    },
     price: {
       type: Number,
       required: true,
       min: 0
     },
-    recipe: {
-      type: [recipeItemSchema],
-      default: []
+    imageDataUrl: {
+      type: String,
+      default: null
+    },
+    trackInventory: {
+      type: Boolean,
+      default: false
+    },
+    inventoryQuantity: {
+      type: Number,
+      min: 0,
+      default: 0
+    },
+    inventoryUnit: {
+      type: String,
+      enum: ['pcs', 'gr', 'ml', null],
+      default: 'pcs'
     },
     isActive: {
       type: Boolean,
@@ -53,4 +44,3 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ name: 1 }, { unique: true });
 
 export const Product = mongoose.model('Product', productSchema);
-

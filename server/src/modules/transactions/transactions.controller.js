@@ -1,6 +1,11 @@
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
-import { getTransactionDetail, getTransactionSummary, listTransactions } from './transactions.service.js';
+import {
+  getTransactionAnalytics,
+  getTransactionDetail,
+  getTransactionSummary,
+  listTransactions
+} from './transactions.service.js';
 
 export const listTransactionsController = asyncHandler(async (request, response) => {
   const transactions = await listTransactions(request.query);
@@ -15,6 +20,14 @@ export const transactionSummaryController = asyncHandler(async (_request, respon
 
   response.json({
     summary
+  });
+});
+
+export const transactionAnalyticsController = asyncHandler(async (request, response) => {
+  const analytics = await getTransactionAnalytics(request.query);
+
+  response.json({
+    analytics
   });
 });
 

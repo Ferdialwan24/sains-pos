@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog.jsx';
 import { FormModal } from '../../components/common/FormModal.jsx';
-import { apiRequest } from '../../lib/api.js';
+import { IconButton } from '../../components/common/IconButton.jsx';
 import { useToast } from '../../hooks/useToast.js';
+import { apiRequest } from '../../lib/api.js';
 
 const defaultForm = {
   number: ''
@@ -12,7 +14,9 @@ export function TablesPage() {
   const [tables, setTables] = useState([]);
   const [form, setForm] = useState(defaultForm);
   const [editingTableId, setEditingTableId] = useState(null);
+  const [deletingTable, setDeletingTable] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -45,9 +49,7 @@ export function TablesPage() {
   };
 
   const handleOpenCreate = () => {
-    setForm(defaultForm);
-    setEditingTableId(null);
-    setErrorMessage('');
+    closeModal();
     setIsModalOpen(true);
   };
 
@@ -106,24 +108,24 @@ export function TablesPage() {
     }
   };
 
-  const handleDelete = async (tableId) => {
-    const confirmed = window.confirm('Delete this table?');
-
-    if (!confirmed) {
+  const handleDelete = async () => {
+    if (!deletingTable) {
       return;
     }
 
+    setIsDeleting(true);
+
     try {
-      const deletedTable = tables.find((table) => table._id === tableId);
-      await apiRequest(`/tables/${tableId}`, {
+      await apiRequest(`/tables/${deletingTable._id}`, {
         method: 'DELETE'
       });
       await loadTables();
       showToast({
         title: 'Table deleted',
-        message: deletedTable ? `Table ${deletedTable.number} has been removed.` : 'The table has been removed.',
+        message: `Table ${deletingTable.number} has been removed.`,
         type: 'success'
       });
+      setDeletingTable(null);
     } catch (error) {
       setErrorMessage(error.message);
       showToast({
@@ -131,6 +133,8 @@ export function TablesPage() {
         message: error.message,
         type: 'error'
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -141,19 +145,19 @@ export function TablesPage() {
           <p className="eyebrow">Admin</p>
           <h2>Manage Tables</h2>
         </div>
-        <div className="header-actions">
-          <p className="muted">Set up the physical tables before cashiers start opening bills.</p>
-          <button className="primary-button" onClick={handleOpenCreate} type="button">
-            Add Table
-          </button>
-        </div>
+        <p className="muted">Set up the physical tables before cashiers start opening bills.</p>
       </div>
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}
 
       <div className="panel">
         <div className="panel-heading">
-          <h3>Current Tables</h3>
+          <div className="panel-heading-left">
+            <button className="primary-button" onClick={handleOpenCreate} type="button">
+              Add Table
+            </button>
+            <h3>Current Tables</h3>
+          </div>
           <span className="panel-count">{tables.length} total</span>
         </div>
         {isLoading ? <p>Loading tables...</p> : null}
@@ -167,12 +171,13 @@ export function TablesPage() {
               </div>
               <div className="row-actions">
                 <span className={`pill pill-${table.status}`}>{table.status}</span>
-                <button className="secondary-button small-button" onClick={() => handleEdit(table)} type="button">
-                  Edit
-                </button>
-                <button className="ghost-button small-button" onClick={() => handleDelete(table._id)} type="button">
-                  Delete
-                </button>
+                <IconButton icon="edit" label="Edit table" onClick={() => handleEdit(table)} />
+                <IconButton
+                  icon="delete"
+                  label="Delete table"
+                  onClick={() => setDeletingTable(table)}
+                  variant="danger"
+                />
               </div>
             </article>
           ))}
@@ -209,6 +214,17 @@ export function TablesPage() {
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
         </form>
       </FormModal>
+
+      <ConfirmDialog
+        confirmLabel="Yes"
+        isConfirming={isDeleting}
+        isOpen={Boolean(deletingTable)}
+        message={`Delete table ${deletingTable?.number ?? ''}?`}
+        onClose={() => setDeletingTable(null)}
+        onConfirm={handleDelete}
+        title="Delete Table"
+      />
     </section>
   );
 }
+
