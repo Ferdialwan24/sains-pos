@@ -8,6 +8,7 @@ export function LoginPage() {
   const location = useLocation();
   const { isAuthenticated, login, user } = useAuth();
   const { showToast } = useToast();
+  const [hasLogoError, setHasLogoError] = useState(false);
   const [form, setForm] = useState({
     username: '',
     password: ''
@@ -54,13 +55,25 @@ export function LoginPage() {
   };
 
   return (
-    <section className="page">
-      <div className="hero-card">
-        <p className="eyebrow">Sains POS</p>
-        <h2>Sign in to the local POS server</h2>
-        <p className="muted">Use the admin or cashier account registered by the administrator.</p>
+    <section className="login-page">
+      <div className="login-card">
+        <div className="login-brand">
+          {!hasLogoError ? (
+            <img
+              alt="Sains POS logo"
+              className="login-logo-image"
+              onError={() => setHasLogoError(true)}
+              src="/brand-logo.jpg"
+            />
+          ) : (
+            <div className="login-logo-fallback">SP</div>
+          )}
+          
+          <h2>Sign in to the local POS server</h2>
+          
+        </div>
 
-        <form className="form-grid" onSubmit={handleSubmit}>
+        <form className="form-grid login-form" onSubmit={handleSubmit}>
           <label className="field">
             <span>Username</span>
             <input

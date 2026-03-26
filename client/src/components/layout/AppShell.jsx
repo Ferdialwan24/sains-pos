@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useToast } from '../../hooks/useToast.js';
@@ -24,6 +25,7 @@ export function AppShell() {
   const location = useLocation();
   const { logout, user } = useAuth();
   const { showToast } = useToast();
+  const [hasLogoError, setHasLogoError] = useState(false);
   const navigation = navigationByRole[user?.role] ?? [];
 
   const handleLogout = () => {
@@ -39,8 +41,18 @@ export function AppShell() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <p className="brand-kicker">Sains POS</p>
-          <h1>Operations</h1>
+          {!hasLogoError ? (
+            <img
+              alt="Sains POS logo"
+              className="sidebar-logo-image"
+              onError={() => setHasLogoError(true)}
+              src="/nav-logo.jpg"
+            />
+          ) : (
+            <div className="sidebar-logo-fallback">SP</div>
+          )}
+          
+         
         </div>
         <div className="user-summary">
           <strong>{user?.fullName}</strong>

@@ -36,8 +36,9 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route element={<ProtectedRoute allowedRoles={['cashier', 'admin']} />}>
-            <Route path="/cashier/tables" element={<TableBillingPage />} />
             <Route path="/cashier/pos" element={<PosPage />} />
+            <Route path="/cashier/tables" element={<TableBillingPage />} />
+            
             <Route path="/cashier/transactions" element={<TransactionsPageLive />} />
             <Route path="/transactions/:transactionId" element={<TransactionReceiptPage />} />
           </Route>
