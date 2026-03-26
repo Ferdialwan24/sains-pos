@@ -104,10 +104,17 @@ export const getTransactionAnalytics = async ({ range = 'daily' } = {}) => {
     totalSales: 0
   }));
   const productTotals = new Map();
+  const summary = {
+    transactionCount: 0,
+    totalRevenue: 0,
+    itemsSold: 0
+  };
 
   for (const transaction of transactions) {
     const bucketIndex = getBucketIndex(new Date(transaction.createdAt), normalizedRange);
     salesBuckets[bucketIndex].totalSales += transaction.totalAmount;
+    summary.transactionCount += 1;
+    summary.totalRevenue += transaction.totalAmount;
 
     for (const item of transaction.items) {
       const current = productTotals.get(String(item.product)) ?? {
@@ -117,6 +124,7 @@ export const getTransactionAnalytics = async ({ range = 'daily' } = {}) => {
       };
 
       current.quantity += item.quantity;
+      summary.itemsSold += item.quantity;
       productTotals.set(String(item.product), current);
     }
   }
@@ -127,6 +135,7 @@ export const getTransactionAnalytics = async ({ range = 'daily' } = {}) => {
 
   return {
     range: normalizedRange,
+    summary,
     salesSeries: salesBuckets,
     topProducts
   };
