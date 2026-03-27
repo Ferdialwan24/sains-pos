@@ -238,6 +238,10 @@ a {
   margin: 0;
 }
 
+.section-heading .panel-heading {
+  margin-bottom: 0;
+}
+
 .panel-count {
   color: #526071;
   font-size: 0.9rem;
@@ -768,6 +772,12 @@ a {
   gap: 16px;
 }
 
+.report-filters,
+.dashboard-filter-stack {
+  display: grid;
+  gap: 16px;
+}
+
 .inventory-toolbar-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1044,8 +1054,16 @@ a {
 }
 
 .report-row {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.3fr) minmax(140px, 0.9fr) minmax(140px, 0.8fr);
   align-items: center;
+}
+
+.report-row-header {
+  background: transparent;
+  border: none;
+  padding: 0 16px;
+  color: #526071;
+  box-shadow: none;
 }
 
 .receipt-panel {

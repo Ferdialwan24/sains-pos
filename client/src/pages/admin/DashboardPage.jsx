@@ -1,15 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiRequest } from '../../lib/api.js';
 import { formatCompactCurrency, formatCurrency } from '../../lib/format.js';
+import {
+  buildDateRangeParams,
+  formatInputDate,
+  getMaxCustomToDate,
+  getPresetDateRange,
+  isRangeLongerThanThreeMonths
+} from '../../lib/dateRange.js';
 
 const rangeOptions = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'yearly', label: 'Yearly' }
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+  { value: 'custom', label: 'Select Range' }
 ];
 
 const rangeMeta = {
-  daily: {
+  today: {
     label: 'Today',
     transactionText: 'Transactions today',
     revenueText: 'Revenue today',
@@ -17,7 +25,7 @@ const rangeMeta = {
     revenuePanelTitle: 'Revenue Today',
     topProductsTitle: 'Top Products Today'
   },
-  weekly: {
+  week: {
     label: 'This Week',
     transactionText: 'Transactions this week',
     revenueText: 'Revenue this week',
@@ -25,13 +33,21 @@ const rangeMeta = {
     revenuePanelTitle: 'Revenue This Week',
     topProductsTitle: 'Top Products This Week'
   },
-  yearly: {
-    label: 'This Year',
-    transactionText: 'Transactions this year',
-    revenueText: 'Revenue this year',
-    itemsText: 'Items sold this year',
-    revenuePanelTitle: 'Revenue This Year',
-    topProductsTitle: 'Top Products This Year'
+  month: {
+    label: 'This Month',
+    transactionText: 'Transactions this month',
+    revenueText: 'Revenue this month',
+    itemsText: 'Items sold this month',
+    revenuePanelTitle: 'Revenue This Month',
+    topProductsTitle: 'Top Products This Month'
+  },
+  custom: {
+    label: 'Custom Range',
+    transactionText: 'Transactions in range',
+    revenueText: 'Revenue in range',
+    itemsText: 'Items sold in range',
+    revenuePanelTitle: 'Revenue in Selected Range',
+    topProductsTitle: 'Top Products in Selected Range'
   }
 };
 
@@ -86,7 +102,10 @@ const formatSummaryValue = (key, value) => {
 };
 
 export function DashboardPage() {
-  const [range, setRange] = useState('daily');
+  const [rangeMode, setRangeMode] = useState('today');
+  const [dateRange, setDateRange] = useState({
+    ...getPresetDateRange('today')
+  });
   const [analytics, setAnalytics] = useState({
     summary: {
       transactionCount: 0,
@@ -97,14 +116,63 @@ export function DashboardPage() {
     topProducts: []
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const customRangeError =
+    rangeMode === 'custom' && isRangeLongerThanThreeMonths(dateRange.from, dateRange.to)
+      ? 'Custom range cannot exceed 3 months.'
+      : '';
+
+  useEffect(() => {
+    if (rangeMode === 'custom') {
+      return;
+    }
+
+    setDateRange(getPresetDateRange(rangeMode));
+  }, [rangeMode]);
 
   useEffect(() => {
     const loadAnalytics = async () => {
+      if (customRangeError) {
+        setAnalytics({
+          summary: {
+            transactionCount: 0,
+            totalRevenue: 0,
+            itemsSold: 0
+          },
+          salesSeries: [],
+          topProducts: []
+        });
+        setErrorMessage(customRangeError);
+        setIsLoading(false);
+        return;
+      }
+
+      if (rangeMode === 'custom' && (!dateRange.from || !dateRange.to)) {
+        setAnalytics({
+          summary: {
+            transactionCount: 0,
+            totalRevenue: 0,
+            itemsSold: 0
+          },
+          salesSeries: [],
+          topProducts: []
+        });
+        setErrorMessage('Choose a start and end date.');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
 
       try {
-        const response = await apiRequest(`/transactions/analytics?range=${range}`);
+        const searchParams = buildDateRangeParams({
+          mode: rangeMode,
+          from: dateRange.from,
+          to: dateRange.to
+        });
+        const response = await apiRequest(`/transactions/analytics?${searchParams.toString()}`);
         setAnalytics(response.analytics);
+        setErrorMessage('');
       } catch (_error) {
         setAnalytics({
           summary: {
@@ -115,13 +183,14 @@ export function DashboardPage() {
           salesSeries: [],
           topProducts: []
         });
+        setErrorMessage('Unable to load dashboard data.');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadAnalytics();
-  }, [range]);
+  }, [customRangeError, dateRange.from, dateRange.to, rangeMode]);
 
   const maxSalesValue = useMemo(
     () => Math.max(...analytics.salesSeries.map((point) => point.totalSales), 1),
@@ -130,11 +199,14 @@ export function DashboardPage() {
 
   const visibleSalesSeries = useMemo(() => {
     const nonZero = analytics.salesSeries.filter((point) => point.totalSales > 0);
-    return nonZero.length > 0 ? nonZero : analytics.salesSeries.slice(0, range === 'yearly' ? 6 : 7);
-  }, [analytics.salesSeries, range]);
+    const source = nonZero.length > 0 ? nonZero : analytics.salesSeries;
+    const maxItems = rangeMode === 'today' ? 8 : 10;
+    return source.slice(-maxItems);
+  }, [analytics.salesSeries, rangeMode]);
 
   const topProducts = useMemo(() => analytics.topProducts.slice(0, 5), [analytics.topProducts]);
-  const rangeInfo = rangeMeta[range];
+  const rangeInfo = rangeMeta[rangeMode];
+  const maxCustomTo = getMaxCustomToDate(dateRange.from);
 
   return (
     <section className="page">
@@ -143,17 +215,42 @@ export function DashboardPage() {
           <p className="eyebrow">Admin</p>
           <h2>Sales Dashboard</h2>
         </div>
-        <div className="range-switch">
-          {rangeOptions.map((option) => (
-            <button
-              key={option.value}
-              className={`range-switch-button${range === option.value ? ' range-switch-button-active' : ''}`}
-              onClick={() => setRange(option.value)}
-              type="button"
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className="dashboard-filter-stack">
+          <div className="range-switch">
+            {rangeOptions.map((option) => (
+              <button
+                key={option.value}
+                className={`range-switch-button${rangeMode === option.value ? ' range-switch-button-active' : ''}`}
+                onClick={() => setRangeMode(option.value)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {rangeMode === 'custom' ? (
+            <div className="filters-row">
+              <label className="field inline-field">
+                <span>From</span>
+                <input
+                  max={formatInputDate(new Date())}
+                  onChange={(event) => setDateRange((current) => ({ ...current, from: event.target.value }))}
+                  type="date"
+                  value={dateRange.from}
+                />
+              </label>
+              <label className="field inline-field">
+                <span>To</span>
+                <input
+                  max={maxCustomTo}
+                  min={dateRange.from || undefined}
+                  onChange={(event) => setDateRange((current) => ({ ...current, to: event.target.value }))}
+                  type="date"
+                  value={dateRange.to}
+                />
+              </label>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -168,6 +265,8 @@ export function DashboardPage() {
           </article>
         ))}
       </div>
+
+      {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
 
       <div className="dashboard-grid">
         <article className="panel dashboard-revenue-panel">

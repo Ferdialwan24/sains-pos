@@ -1,4 +1,5 @@
 import { Transaction } from '../../models/Transaction.js';
+import { ApiError } from '../../utils/ApiError.js';
 
 const buildDateFilter = ({ from, to }) => {
   if (!from && !to) {
@@ -22,6 +23,8 @@ const buildDateFilter = ({ from, to }) => {
   return createdAt;
 };
 
+const getDaysBetween = (start, end) => Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+
 export const listTransactions = async ({ status, from, to }) => {
   const filter = {};
 
@@ -40,10 +43,50 @@ export const listTransactions = async ({ status, from, to }) => {
     .sort({ createdAt: -1 });
 };
 
-const getAnalyticsWindow = (range = 'daily') => {
+const getAnalyticsWindow = ({ range = 'today', from, to } = {}) => {
   const now = new Date();
 
-  if (range === 'weekly') {
+  if (range === 'custom') {
+    if (!from || !to) {
+      throw new ApiError(400, 'Custom range requires from and to dates');
+    }
+
+    const start = new Date(from);
+    const end = new Date(to);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new ApiError(400, 'Invalid custom date range');
+    }
+
+    if (end < start) {
+      throw new ApiError(400, 'End date must be after start date');
+    }
+
+    const maxEnd = new Date(start);
+    maxEnd.setMonth(maxEnd.getMonth() + 3);
+    maxEnd.setHours(23, 59, 59, 999);
+
+    if (end > maxEnd) {
+      throw new ApiError(400, 'Custom range cannot exceed 3 months');
+    }
+
+    const totalDays = getDaysBetween(start, end);
+    const labels = Array.from({ length: totalDays }, (_, index) => {
+      const labelDate = new Date(start);
+      labelDate.setDate(start.getDate() + index);
+
+      return labelDate.toLocaleDateString('en-MY', {
+        day: '2-digit',
+        month: 'short'
+      });
+    });
+
+    return { start, end, labels, range: 'custom' };
+  }
+
+  if (range === 'week' || range === 'weekly') {
     const start = new Date(now);
     const day = start.getDay();
     const diff = day === 0 ? -6 : 1 - day;
@@ -56,15 +99,24 @@ const getAnalyticsWindow = (range = 'daily') => {
 
     const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-    return { start, end, labels, range };
+    return { start, end, labels, range: 'week' };
   }
 
-  if (range === 'yearly') {
-    const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
-    const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  if (range === 'month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const totalDays = end.getDate();
+    const labels = Array.from({ length: totalDays }, (_, index) => {
+      const labelDate = new Date(start);
+      labelDate.setDate(index + 1);
 
-    return { start, end, labels, range };
+      return labelDate.toLocaleDateString('en-MY', {
+        day: '2-digit',
+        month: 'short'
+      });
+    });
+
+    return { start, end, labels, range: 'month' };
   }
 
   const start = new Date(now);
@@ -73,24 +125,28 @@ const getAnalyticsWindow = (range = 'daily') => {
   end.setHours(23, 59, 59, 999);
   const labels = Array.from({ length: 24 }, (_, index) => `${String(index).padStart(2, '0')}:00`);
 
-  return { start, end, labels, range: 'daily' };
+  return { start, end, labels, range: 'today' };
 };
 
-const getBucketIndex = (date, range) => {
-  if (range === 'weekly') {
+const getBucketIndex = (date, range, start) => {
+  if (range === 'week') {
     const day = date.getDay();
     return day === 0 ? 6 : day - 1;
   }
 
-  if (range === 'yearly') {
-    return date.getMonth();
+  if (range === 'month') {
+    return date.getDate() - 1;
+  }
+
+  if (range === 'custom') {
+    return getDaysBetween(start, date) - 1;
   }
 
   return date.getHours();
 };
 
-export const getTransactionAnalytics = async ({ range = 'daily' } = {}) => {
-  const { start, end, labels, range: normalizedRange } = getAnalyticsWindow(range);
+export const getTransactionAnalytics = async ({ range = 'today', from, to } = {}) => {
+  const { start, end, labels, range: normalizedRange } = getAnalyticsWindow({ range, from, to });
   const transactions = await Transaction.find({
     status: 'paid',
     createdAt: {
@@ -111,7 +167,7 @@ export const getTransactionAnalytics = async ({ range = 'daily' } = {}) => {
   };
 
   for (const transaction of transactions) {
-    const bucketIndex = getBucketIndex(new Date(transaction.createdAt), normalizedRange);
+    const bucketIndex = getBucketIndex(new Date(transaction.createdAt), normalizedRange, start);
     salesBuckets[bucketIndex].totalSales += transaction.totalAmount;
     summary.transactionCount += 1;
     summary.totalRevenue += transaction.totalAmount;
