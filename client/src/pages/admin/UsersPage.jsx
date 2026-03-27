@@ -176,38 +176,47 @@ export function UsersPage() {
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}
 
-      <div className="panel">
-        <div className="panel-heading">
-          <div className="panel-heading-left">
-            <button className="primary-button" onClick={handleOpenCreate} type="button">
-              Add User
-            </button>
+      <div className="user-list-section">
+        <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
+          Add User
+        </button>
+
+        <div className="panel user-list-panel">
+          <div className="panel-heading user-list-heading">
             <h3>User List</h3>
           </div>
-          <span className="panel-count">{users.length} total</span>
-        </div>
-        {isLoading ? <p>Loading users...</p> : null}
-        {!isLoading && users.length === 0 ? <p>No users yet.</p> : null}
-        <div className="simple-list">
-          {users.map((user) => (
-            <article key={user.id} className="list-row list-row-stack">
-              <div>
+          {isLoading ? <p>Loading users...</p> : null}
+          {!isLoading && users.length === 0 ? <p>No users yet.</p> : null}
+          <div className="report-table user-table">
+            {users.length > 0 ? (
+              <article className="report-row report-row-header user-row user-row-header">
+                <strong>Name</strong>
+                <strong>Username</strong>
+                <strong>Role</strong>
+                <strong>Status</strong>
+                <strong>Action</strong>
+              </article>
+            ) : null}
+            {users.map((user) => (
+              <article key={user.id} className="report-row user-row">
                 <strong>{user.fullName}</strong>
-                <p className="muted compact-text">
-                  @{user.username} | {user.role} | {user.isActive ? 'active' : 'inactive'}
-                </p>
-              </div>
-              <div className="row-actions">
-                <IconButton icon="edit" label="Edit user" onClick={() => handleEdit(user)} />
-                <IconButton
-                  icon="delete"
-                  label="Delete user"
-                  onClick={() => setDeletingUser(user)}
-                  variant="danger"
-                />
-              </div>
-            </article>
-          ))}
+                <span>@{user.username}</span>
+                <span className="capitalize-text">{user.role}</span>
+                <span className={`pill ${user.isActive ? 'pill-success' : 'pill-cancel'}`}>
+                  {user.isActive ? 'active' : 'inactive'}
+                </span>
+                <div className="row-actions user-row-actions">
+                  <IconButton icon="edit" label="Edit user" onClick={() => handleEdit(user)} />
+                  <IconButton
+                    icon="delete"
+                    label="Delete user"
+                    onClick={() => setDeletingUser(user)}
+                    variant="danger"
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </div>
 

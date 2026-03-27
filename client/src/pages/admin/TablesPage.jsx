@@ -150,37 +150,37 @@ export function TablesPage() {
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}
 
-      <div className="panel">
-        <div className="panel-heading">
-          <div className="panel-heading-left">
-            <button className="primary-button" onClick={handleOpenCreate} type="button">
-              Add Table
-            </button>
-            <h3>Current Tables</h3>
+      <div className="user-list-section">
+        <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
+          Add Table
+        </button>
+
+        <div className="panel table-list-panel">
+          <div className="panel-heading user-list-heading">
+            <h3>Table List</h3>
           </div>
-          <span className="panel-count">{tables.length} total</span>
-        </div>
-        {isLoading ? <p>Loading tables...</p> : null}
-        {!isLoading && tables.length === 0 ? <p>No tables yet.</p> : null}
-        <div className="simple-list">
-          {tables.map((table) => (
-            <article key={table._id} className="list-row list-row-stack">
-              <div>
-                <strong>Table {table.number}</strong>
-                <p className="muted compact-text">{table.activeOrder?.customerName ?? 'No active bill'}</p>
-              </div>
-              <div className="row-actions">
-                <span className={`pill pill-${table.status}`}>{table.status}</span>
-                <IconButton icon="edit" label="Edit table" onClick={() => handleEdit(table)} />
-                <IconButton
-                  icon="delete"
-                  label="Delete table"
-                  onClick={() => setDeletingTable(table)}
-                  variant="danger"
-                />
-              </div>
-            </article>
-          ))}
+          {isLoading ? <p>Loading tables...</p> : null}
+          {!isLoading && tables.length === 0 ? <p>No tables yet.</p> : null}
+          <div className="table-admin-grid">
+            {tables.map((table) => (
+              <article key={table._id} className={`table-admin-card table-admin-card-${table.status}`}>
+                <div className="table-admin-card-top">
+                  <span className="table-admin-label">Table</span>
+                  <span className={`pill pill-${table.status}`}>{table.status}</span>
+                </div>
+                <strong className="table-admin-number">{table.number}</strong>
+                <div className="row-actions table-row-actions">
+                  <IconButton icon="edit" label="Edit table" onClick={() => handleEdit(table)} />
+                  <IconButton
+                    icon="delete"
+                    label="Delete table"
+                    onClick={() => setDeletingTable(table)}
+                    variant="danger"
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </div>
 

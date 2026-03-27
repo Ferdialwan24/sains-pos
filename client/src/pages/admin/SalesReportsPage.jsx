@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { downloadSalesReportExcel } from '../../lib/downloads.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency, formatDateOnly } from '../../lib/format.js';
@@ -8,6 +8,7 @@ import {
   getPresetDateRange,
   isRangeLongerThanThreeMonths
 } from '../../lib/dateRange.js';
+import { useDismissibleLayer } from '../../hooks/useDismissibleLayer.js';
 
 const filterOptions = [
   { value: 'today', label: 'Today' },
@@ -19,15 +20,25 @@ const filterOptions = [
 export function SalesReportsPage() {
   const [transactions, setTransactions] = useState([]);
   const [rangeMode, setRangeMode] = useState('today');
+  const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
   const [dateRange, setDateRange] = useState({
+    ...getPresetDateRange('today')
+  });
+  const [draftDateRange, setDraftDateRange] = useState({
     ...getPresetDateRange('today')
   });
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const customRangeError =
-    rangeMode === 'custom' && isRangeLongerThanThreeMonths(dateRange.from, dateRange.to)
-      ? 'Custom range cannot exceed 3 months.'
-      : '';
+  const filtersRef = useRef(null);
+  const draftRangeError = isRangeLongerThanThreeMonths(draftDateRange.from, draftDateRange.to)
+    ? 'Custom range cannot exceed 3 months.'
+    : '';
+
+  useDismissibleLayer({
+    ref: filtersRef,
+    isOpen: isCustomPickerOpen,
+    onClose: () => setIsCustomPickerOpen(false)
+  });
 
   useEffect(() => {
     if (rangeMode === 'custom') {
@@ -39,20 +50,6 @@ export function SalesReportsPage() {
 
   useEffect(() => {
     const loadTransactions = async () => {
-      if (customRangeError) {
-        setTransactions([]);
-        setErrorMessage(customRangeError);
-        setIsLoading(false);
-        return;
-      }
-
-      if (rangeMode === 'custom' && (!dateRange.from || !dateRange.to)) {
-        setTransactions([]);
-        setErrorMessage('Choose a start and end date.');
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
 
       try {
@@ -72,7 +69,7 @@ export function SalesReportsPage() {
     };
 
     loadTransactions();
-  }, [customRangeError, dateRange.from, dateRange.to, rangeMode]);
+  }, [dateRange.from, dateRange.to]);
 
   const totalSales = useMemo(
     () => transactions.reduce((sum, transaction) => sum + transaction.totalAmount, 0),
@@ -91,7 +88,41 @@ export function SalesReportsPage() {
     });
   };
 
-  const maxCustomTo = getMaxCustomToDate(dateRange.from);
+  const maxCustomTo = getMaxCustomToDate(draftDateRange.from);
+  const isCustomFilterActive = rangeMode === 'custom';
+  const isCustomApplyDisabled =
+    !draftDateRange.from || !draftDateRange.to || Boolean(draftRangeError);
+
+  const handlePresetSelect = (mode) => {
+    setRangeMode(mode);
+    setIsCustomPickerOpen(false);
+  };
+
+  const handleOpenCustom = () => {
+    setDraftDateRange({
+      ...dateRange
+    });
+    setIsCustomPickerOpen((current) => !current);
+  };
+
+  const handleApplyCustomRange = () => {
+    if (isCustomApplyDisabled) {
+      return;
+    }
+
+    setRangeMode('custom');
+    setDateRange({
+      ...draftDateRange
+    });
+    setIsCustomPickerOpen(false);
+  };
+
+  const handleCancelCustomRange = () => {
+    setDraftDateRange({
+      ...dateRange
+    });
+    setIsCustomPickerOpen(false);
+  };
 
   return (
     <section className="page">
@@ -105,14 +136,29 @@ export function SalesReportsPage() {
         </button>
       </div>
 
-      <div className="panel">
-        <div className="report-filters">
+      <div className="sales-report-filter-panel">
+        <div ref={filtersRef} className="report-filters report-filters-static">
           <div className="range-switch">
             {filterOptions.map((option) => (
               <button
                 key={option.value}
-                className={`range-switch-button${rangeMode === option.value ? ' range-switch-button-active' : ''}`}
-                onClick={() => setRangeMode(option.value)}
+                className={`range-switch-button${
+                  option.value === 'custom'
+                    ? isCustomPickerOpen || isCustomFilterActive
+                      ? ' range-switch-button-active'
+                      : ''
+                    : rangeMode === option.value
+                      ? ' range-switch-button-active'
+                      : ''
+                }`}
+                onClick={() => {
+                  if (option.value === 'custom') {
+                    handleOpenCustom();
+                    return;
+                  }
+
+                  handlePresetSelect(option.value);
+                }}
                 type="button"
               >
                 {option.label}
@@ -120,27 +166,41 @@ export function SalesReportsPage() {
             ))}
           </div>
 
-          {rangeMode === 'custom' ? (
-            <div className="filters-row">
+          {isCustomPickerOpen ? (
+            <div className="filter-popover">
               <label className="field inline-field">
                 <span>From</span>
                 <input
                   max={formatInputDate(new Date())}
-                  onChange={(event) => setDateRange((current) => ({ ...current, from: event.target.value }))}
+                  onChange={(event) => setDraftDateRange((current) => ({ ...current, from: event.target.value }))}
                   type="date"
-                  value={dateRange.from}
+                  value={draftDateRange.from}
                 />
               </label>
               <label className="field inline-field">
                 <span>To</span>
                 <input
                   max={maxCustomTo}
-                  min={dateRange.from || undefined}
-                  onChange={(event) => setDateRange((current) => ({ ...current, to: event.target.value }))}
+                  min={draftDateRange.from || undefined}
+                  onChange={(event) => setDraftDateRange((current) => ({ ...current, to: event.target.value }))}
                   type="date"
-                  value={dateRange.to}
+                  value={draftDateRange.to}
                 />
               </label>
+              {draftRangeError ? <p className="form-error popover-error">{draftRangeError}</p> : null}
+              <div className="filter-popover-actions">
+                <button className="secondary-button small-button" onClick={handleCancelCustomRange} type="button">
+                  Cancel
+                </button>
+                <button
+                  className="primary-button small-button"
+                  disabled={isCustomApplyDisabled}
+                  onClick={handleApplyCustomRange}
+                  type="button"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
@@ -157,13 +217,10 @@ export function SalesReportsPage() {
         </article>
       </div>
 
-      <div className="section-heading">
-        <div className="panel-heading">
+      <div className="panel">
+        <div className="panel-heading user-list-heading">
           <h3>Sales List</h3>
         </div>
-      </div>
-
-      <div className="panel">
         {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
         {isLoading ? <p>Loading sales report...</p> : null}
         {!isLoading && transactions.length === 0 ? <p>No paid transactions found.</p> : null}

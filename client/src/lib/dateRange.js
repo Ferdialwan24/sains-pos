@@ -59,6 +59,8 @@ export const buildDateRangeParams = ({ mode, from, to }) => {
   const searchParams = new URLSearchParams();
 
   if (mode === 'custom') {
+    searchParams.set('range', 'custom');
+
     if (from) {
       searchParams.set('from', from);
     }
