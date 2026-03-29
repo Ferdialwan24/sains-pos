@@ -226,14 +226,14 @@ export function SalesReportsPage() {
         {!isLoading && transactions.length === 0 ? <p>No paid transactions found.</p> : null}
         <div className="report-table">
           {transactions.length > 0 ? (
-            <article className="report-row report-row-header">
+            <article className="report-row report-row-header sales-report-row sales-report-row-header">
               <strong>Invoice No</strong>
               <strong>Date</strong>
               <strong>Amount</strong>
             </article>
           ) : null}
           {transactions.map((transaction) => (
-            <article key={transaction._id} className="report-row">
+            <article key={transaction._id} className="report-row sales-report-row">
               <strong>{transaction.invoiceNo}</strong>
               <span>{formatDateOnly(transaction.createdAt)}</span>
               <span>{formatCurrency(transaction.totalAmount)}</span>

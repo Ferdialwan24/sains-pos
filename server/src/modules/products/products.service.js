@@ -1,5 +1,6 @@
 import { Product } from '../../models/Product.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { getStockAlert } from '../../utils/stockAlert.js';
 
 const INVENTORY_UNITS = new Set(['pcs', 'gr', 'ml']);
 
@@ -39,6 +40,7 @@ const toProductPayload = (productDocument) => {
   const product = productDocument.toObject();
   const inventoryQuantity = product.trackInventory ? product.inventoryQuantity ?? 0 : null;
   const maxOrderQuantity = product.trackInventory ? Math.floor(inventoryQuantity) : null;
+  const stockAlert = getStockAlert(product);
 
   return {
     ...product,
@@ -46,7 +48,8 @@ const toProductPayload = (productDocument) => {
       isAvailable: product.trackInventory ? inventoryQuantity > 0 : true,
       maxOrderQuantity,
       reason: product.trackInventory && inventoryQuantity <= 0 ? `Out of stock: ${product.name}` : null
-    }
+    },
+    stockAlert
   };
 };
 
@@ -63,7 +66,8 @@ export const createProduct = async ({
   imageDataUrl,
   trackInventory = false,
   inventoryQuantity = 0,
-  inventoryUnit = 'pcs'
+  inventoryUnit = 'pcs',
+  lowStockThreshold = 0
 }) => {
   if (!name?.trim()) {
     throw new ApiError(400, 'Product name is required');
@@ -77,13 +81,22 @@ export const createProduct = async ({
     throw new ApiError(400, 'Tracked inventory quantity must be zero or greater');
   }
 
+  if (!Number.isFinite(lowStockThreshold) || lowStockThreshold < 0) {
+    throw new ApiError(400, 'Low stock threshold must be zero or greater');
+  }
+
+  if (trackInventory && lowStockThreshold <= 0) {
+    throw new ApiError(400, 'Low stock threshold is required when inventory tracking is active');
+  }
+
   return Product.create({
     name: name.trim(),
     price,
     imageDataUrl: normalizeImageDataUrl(imageDataUrl) ?? null,
     trackInventory: Boolean(trackInventory),
     inventoryQuantity: trackInventory ? inventoryQuantity : 0,
-    inventoryUnit: normalizeInventoryUnit(inventoryUnit) ?? 'pcs'
+    inventoryUnit: normalizeInventoryUnit(inventoryUnit) ?? 'pcs',
+    lowStockThreshold
   });
 };
 
@@ -93,6 +106,10 @@ export const updateProduct = async (productId, payload) => {
   if (!product) {
     throw new ApiError(404, 'Product not found');
   }
+
+  const nextTrackInventory = payload.trackInventory !== undefined ? Boolean(payload.trackInventory) : product.trackInventory;
+  const nextLowStockThreshold =
+    payload.lowStockThreshold !== undefined ? payload.lowStockThreshold : product.lowStockThreshold ?? 0;
 
   if (payload.name !== undefined) {
     if (!payload.name?.trim()) {
@@ -126,6 +143,18 @@ export const updateProduct = async (productId, payload) => {
     }
 
     product.inventoryQuantity = payload.inventoryQuantity;
+  }
+
+  if (payload.lowStockThreshold !== undefined) {
+    if (!Number.isFinite(payload.lowStockThreshold) || payload.lowStockThreshold < 0) {
+      throw new ApiError(400, 'Low stock threshold must be zero or greater');
+    }
+
+    product.lowStockThreshold = payload.lowStockThreshold;
+  }
+
+  if (nextTrackInventory && nextLowStockThreshold <= 0) {
+    throw new ApiError(400, 'Low stock threshold is required when inventory tracking is active');
   }
 
   const normalizedInventoryUnit = normalizeInventoryUnit(payload.inventoryUnit);

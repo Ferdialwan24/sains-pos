@@ -1,20 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiRequest } from '../../lib/api.js';
 import { formatCompactCurrency, formatCurrency } from '../../lib/format.js';
-import {
-  buildDateRangeParams,
-  formatInputDate,
-  getMaxCustomToDate,
-  getPresetDateRange,
-  isRangeLongerThanThreeMonths
-} from '../../lib/dateRange.js';
-import { useDismissibleLayer } from '../../hooks/useDismissibleLayer.js';
+import { buildDateRangeParams } from '../../lib/dateRange.js';
 
 const rangeOptions = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'This Week' },
-  { value: 'month', label: 'This Month' },
-  { value: 'custom', label: 'Select Range' }
+  { value: 'month', label: 'This Month' }
 ];
 
 const rangeMeta = {
@@ -42,16 +35,6 @@ const rangeMeta = {
     revenuePanelTitle: 'Revenue This Month',
     topProductsTitle: 'Top Products This Month'
   }
-};
-
-const formatRangeLabel = (from, to) => {
-  const formatter = new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-
-  return `${formatter.format(new Date(from))} - ${formatter.format(new Date(to))}`;
 };
 
 const summaryCards = [
@@ -93,6 +76,19 @@ const summaryCards = [
         />
       </svg>
     )
+  },
+  {
+    key: 'stockAlerts',
+    title: 'Stock alerts active',
+    variant: 'summary-icon-red',
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M12 3.25 21 19a1.25 1.25 0 0 1-1.09 1.88H4.1A1.25 1.25 0 0 1 3 19L12 3.25Zm0 4.4a1 1 0 0 0-1 1v5.1a1 1 0 1 0 2 0v-5.1a1 1 0 0 0-1-1Zm0 10a1.15 1.15 0 1 0 0-2.3 1.15 1.15 0 0 0 0 2.3Z"
+          fill="currentColor"
+        />
+      </svg>
+    )
   }
 ];
 
@@ -106,13 +102,6 @@ const formatSummaryValue = (key, value) => {
 
 export function DashboardPage() {
   const [rangeMode, setRangeMode] = useState('today');
-  const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
-  const [dateRange, setDateRange] = useState({
-    ...getPresetDateRange('today')
-  });
-  const [draftDateRange, setDraftDateRange] = useState({
-    ...getPresetDateRange('today')
-  });
   const [analytics, setAnalytics] = useState({
     summary: {
       transactionCount: 0,
@@ -122,26 +111,9 @@ export function DashboardPage() {
     salesSeries: [],
     topProducts: []
   });
+  const [stockAlerts, setStockAlerts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const filtersRef = useRef(null);
-  const draftRangeError = isRangeLongerThanThreeMonths(draftDateRange.from, draftDateRange.to)
-    ? 'Custom range cannot exceed 3 months.'
-    : '';
-
-  useDismissibleLayer({
-    ref: filtersRef,
-    isOpen: isCustomPickerOpen,
-    onClose: () => setIsCustomPickerOpen(false)
-  });
-
-  useEffect(() => {
-    if (rangeMode === 'custom') {
-      return;
-    }
-
-    setDateRange(getPresetDateRange(rangeMode));
-  }, [rangeMode]);
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -149,12 +121,24 @@ export function DashboardPage() {
 
       try {
         const searchParams = buildDateRangeParams({
-          mode: rangeMode,
-          from: dateRange.from,
-          to: dateRange.to
+          mode: rangeMode
         });
-        const response = await apiRequest(`/transactions/analytics?${searchParams.toString()}`);
-        setAnalytics(response.analytics);
+        const [analyticsResponse, inventoryResponse] = await Promise.all([
+          apiRequest(`/transactions/analytics?${searchParams.toString()}`),
+          apiRequest('/inventory')
+        ]);
+        setAnalytics(analyticsResponse.analytics);
+        setStockAlerts(
+          inventoryResponse.items
+            .filter((item) => item.stockAlert?.isAlert)
+            .sort((left, right) => {
+              if (left.stockAlert.status === right.stockAlert.status) {
+                return left.name.localeCompare(right.name);
+              }
+
+              return left.stockAlert.status === 'out' ? -1 : 1;
+            })
+        );
         setErrorMessage('');
       } catch (_error) {
         setAnalytics({
@@ -166,6 +150,7 @@ export function DashboardPage() {
           salesSeries: [],
           topProducts: []
         });
+        setStockAlerts([]);
         setErrorMessage('Unable to load dashboard data.');
       } finally {
         setIsLoading(false);
@@ -173,7 +158,7 @@ export function DashboardPage() {
     };
 
     loadAnalytics();
-  }, [dateRange.from, dateRange.to, rangeMode]);
+  }, [rangeMode]);
 
   const maxSalesValue = useMemo(
     () => Math.max(...analytics.salesSeries.map((point) => point.totalSales), 1),
@@ -188,53 +173,15 @@ export function DashboardPage() {
   }, [analytics.salesSeries, rangeMode]);
 
   const topProducts = useMemo(() => analytics.topProducts.slice(0, 5), [analytics.topProducts]);
-  const rangeLabel = rangeMode === 'custom' ? formatRangeLabel(dateRange.from, dateRange.to) : '';
-  const rangeInfo =
-    rangeMode === 'custom'
-      ? {
-          label: rangeLabel,
-          transactionText: `Transactions ${rangeLabel}`,
-          revenueText: `Revenue ${rangeLabel}`,
-          itemsText: `Items sold ${rangeLabel}`,
-          revenuePanelTitle: `Revenue ${rangeLabel}`,
-          topProductsTitle: `Top Products ${rangeLabel}`
-        }
-      : rangeMeta[rangeMode];
-  const maxCustomTo = getMaxCustomToDate(draftDateRange.from);
-  const isCustomFilterActive = rangeMode === 'custom';
-  const isCustomApplyDisabled =
-    !draftDateRange.from || !draftDateRange.to || Boolean(draftRangeError);
-
-  const handlePresetSelect = (mode) => {
-    setRangeMode(mode);
-    setIsCustomPickerOpen(false);
-  };
-
-  const handleOpenCustom = () => {
-    setDraftDateRange({
-      ...dateRange
-    });
-    setIsCustomPickerOpen((current) => !current);
-  };
-
-  const handleApplyCustomRange = () => {
-    if (isCustomApplyDisabled) {
-      return;
-    }
-
-    setRangeMode('custom');
-    setDateRange({
-      ...draftDateRange
-    });
-    setIsCustomPickerOpen(false);
-  };
-
-  const handleCancelCustomRange = () => {
-    setDraftDateRange({
-      ...dateRange
-    });
-    setIsCustomPickerOpen(false);
-  };
+  const rangeInfo = rangeMeta[rangeMode];
+  const lowStockCount = useMemo(
+    () => stockAlerts.filter((item) => item.stockAlert?.status === 'low').length,
+    [stockAlerts]
+  );
+  const outOfStockCount = useMemo(
+    () => stockAlerts.filter((item) => item.stockAlert?.status === 'out').length,
+    [stockAlerts]
+  );
 
   return (
     <section className="page">
@@ -243,81 +190,50 @@ export function DashboardPage() {
           <p className="eyebrow">Admin</p>
           <h2>Sales Dashboard</h2>
         </div>
-        <div ref={filtersRef} className="dashboard-filter-stack report-filters-static">
+        <div className="dashboard-filter-stack">
           <div className="range-switch">
             {rangeOptions.map((option) => (
               <button
                 key={option.value}
-                className={`range-switch-button${
-                  option.value === 'custom'
-                    ? isCustomPickerOpen || isCustomFilterActive
-                      ? ' range-switch-button-active'
-                      : ''
-                    : rangeMode === option.value
-                      ? ' range-switch-button-active'
-                      : ''
-                }`}
-                onClick={() => {
-                  if (option.value === 'custom') {
-                    handleOpenCustom();
-                    return;
-                  }
-
-                  handlePresetSelect(option.value);
-                }}
+                className={`range-switch-button${rangeMode === option.value ? ' range-switch-button-active' : ''}`}
+                onClick={() => setRangeMode(option.value)}
                 type="button"
               >
                 {option.label}
               </button>
             ))}
           </div>
-          {isCustomPickerOpen ? (
-            <div className="filter-popover">
-              <label className="field inline-field">
-                <span>From</span>
-                <input
-                  max={formatInputDate(new Date())}
-                  onChange={(event) => setDraftDateRange((current) => ({ ...current, from: event.target.value }))}
-                  type="date"
-                  value={draftDateRange.from}
-                />
-              </label>
-              <label className="field inline-field">
-                <span>To</span>
-                <input
-                  max={maxCustomTo}
-                  min={draftDateRange.from || undefined}
-                  onChange={(event) => setDraftDateRange((current) => ({ ...current, to: event.target.value }))}
-                  type="date"
-                  value={draftDateRange.to}
-                />
-              </label>
-              {draftRangeError ? <p className="form-error popover-error">{draftRangeError}</p> : null}
-              <div className="filter-popover-actions">
-                <button className="secondary-button small-button" onClick={handleCancelCustomRange} type="button">
-                  Cancel
-                </button>
-                <button
-                  className="primary-button small-button"
-                  disabled={isCustomApplyDisabled}
-                  onClick={handleApplyCustomRange}
-                  type="button"
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
 
       <div className="dashboard-summary-grid">
         {summaryCards.map((card) => (
-          <article key={card.key} className="dashboard-summary-card">
+          <article
+            key={card.key}
+            className={`dashboard-summary-card${card.key === 'stockAlerts' ? ' dashboard-stock-alert-card' : ''}`}
+          >
             <div className={`dashboard-summary-icon ${card.variant}`}>{card.icon}</div>
             <div className="dashboard-summary-copy">
-              <p>{rangeInfo[card.titleKey]}</p>
-              <strong>{formatSummaryValue(card.key, analytics.summary?.[card.key])}</strong>
+              <p>{card.title ?? rangeInfo[card.titleKey]}</p>
+              {card.key === 'stockAlerts' ? (
+                <div className="dashboard-stock-alert-summary">
+                  <div className="dashboard-stock-alert-rows">
+                    <div className="dashboard-stock-alert-line">
+                      <strong className="dashboard-stock-alert-count">{outOfStockCount}</strong>
+                      <span className="pill pill-cancel">Out of Stock</span>
+                    </div>
+                    <div className="dashboard-stock-alert-line">
+                      <strong className="dashboard-stock-alert-count">{lowStockCount}</strong>
+                      <span className="pill pill-active">Low Stock</span>
+                    </div>
+                  </div>
+                  <Link className="secondary-button small-button dashboard-stock-alert-link" to="/admin/inventory">
+                    View Inventory
+                  </Link>
+                </div>
+              ) : (
+                <strong>{formatSummaryValue(card.key, analytics.summary?.[card.key])}</strong>
+              )}
             </div>
           </article>
         ))}

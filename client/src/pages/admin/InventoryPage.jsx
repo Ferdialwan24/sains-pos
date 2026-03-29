@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { FormModal } from '../../components/common/FormModal.jsx';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
 
@@ -13,6 +14,7 @@ export function InventoryPage() {
   const { showToast } = useToast();
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(defaultForm);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -35,11 +37,41 @@ export function InventoryPage() {
     loadItems();
   }, []);
 
-  const filteredItems = useMemo(
-    () =>
-      items.filter((item) => item.name.toLowerCase().includes(form.search.trim().toLowerCase())),
-    [form.search, items]
+  const matchedItems = useMemo(() => {
+    const query = form.search.trim().toLowerCase();
+
+    if (!query) {
+      return [];
+    }
+
+    return items.filter((item) => item.name.toLowerCase().includes(query)).slice(0, 6);
+  }, [form.search, items]);
+
+  const selectedItem = useMemo(
+    () => items.find((item) => item._id === form.productId) ?? null,
+    [form.productId, items]
   );
+
+  const shouldShowMatches =
+    isModalOpen &&
+    form.search.trim().length > 0 &&
+    matchedItems.length > 0 &&
+    (!selectedItem || selectedItem.name.toLowerCase() !== form.search.trim().toLowerCase());
+
+  const handleSelectItem = (item) => {
+    setForm((currentForm) => ({
+      ...currentForm,
+      productId: item._id,
+      search: item.name,
+      unit: item.inventoryUnit || currentForm.unit
+    }));
+  };
+
+  const closeModal = () => {
+    setForm(defaultForm);
+    setIsModalOpen(false);
+    setErrorMessage('');
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -60,7 +92,7 @@ export function InventoryPage() {
         message: 'Product stock has been increased.',
         type: 'success'
       });
-      setForm(defaultForm);
+      closeModal();
       await loadItems();
     } catch (error) {
       setErrorMessage(error.message);
@@ -84,35 +116,110 @@ export function InventoryPage() {
         <p className="muted">Only products with active inventory tracking appear here.</p>
       </div>
 
-      <form className="panel inventory-toolbar" onSubmit={handleSubmit}>
-        <div className="panel-heading">
-          <h3>Add Stock</h3>
-          <span className="panel-count">{items.length} tracked products</span>
+      <div className="user-list-section">
+        <button className="primary-button section-action-button" onClick={() => setIsModalOpen(true)} type="button">
+          Add Stock
+        </button>
+      </div>
+
+      <div className="panel">
+        <div className="panel-heading user-list-heading">
+          <h3>Tracked Product List</h3>
         </div>
-        <div className="inventory-toolbar-grid">
-          <label className="field">
+        {isLoading ? <p>Loading inventory...</p> : null}
+        {!isLoading && items.length === 0 ? <p>No tracked products yet. Enable inventory tracking from Products.</p> : null}
+        <div className="report-table inventory-table">
+          {items.length > 0 ? (
+            <article className="report-row report-row-header product-row product-row-header inventory-product-row">
+              <strong>Image</strong>
+              <strong>Product Name</strong>
+              <strong>QTY</strong>
+              <strong>Status</strong>
+              <strong>Qty Alert</strong>
+            </article>
+          ) : null}
+          {items.map((item) => (
+            <article key={item._id} className="report-row product-row inventory-product-row">
+              <div className="product-table-image">
+                {item.imageDataUrl ? <img alt={item.name} src={item.imageDataUrl} /> : <span>No image</span>}
+              </div>
+              <div className="product-name-cell">
+                <strong>{item.name}</strong>
+              </div>
+              <span>
+                {item.inventoryQuantity} {item.inventoryUnit}
+              </span>
+              <span
+                className={`pill ${
+                  item.stockAlert?.status === 'out'
+                    ? 'pill-cancel'
+                    : item.stockAlert?.status === 'low'
+                      ? 'pill-active'
+                      : 'pill-available'
+                }`}
+              >
+                {item.stockAlert?.status === 'out'
+                  ? 'Out of Stock'
+                  : item.stockAlert?.status === 'low'
+                    ? 'Low Stock'
+                    : 'In Stock'}
+              </span>
+              <span>
+                {item.lowStockThreshold > 0 ? `${item.lowStockThreshold} ${item.inventoryUnit}` : '-'}
+              </span>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <FormModal
+        footer={
+          <>
+            <button className="secondary-button" onClick={closeModal} type="button">
+              Cancel
+            </button>
+            <button className="primary-button" disabled={isSubmitting || !form.productId} form="inventory-form" type="submit">
+              {isSubmitting ? 'Updating...' : 'Add Stock'}
+            </button>
+          </>
+        }
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title="Add Stock"
+      >
+        <form className="form-grid" id="inventory-form" onSubmit={handleSubmit}>
+          <div className="field inventory-search-field">
             <span>Search product</span>
             <input
-              onChange={(event) => setForm((currentForm) => ({ ...currentForm, search: event.target.value }))}
+              onChange={(event) =>
+                setForm((currentForm) => ({
+                  ...currentForm,
+                  search: event.target.value,
+                  productId:
+                    selectedItem?.name.toLowerCase() === event.target.value.trim().toLowerCase() ? currentForm.productId : ''
+                }))
+              }
               placeholder="Search tracked product"
               value={form.search}
             />
-          </label>
-          <label className="field">
-            <span>Matched product</span>
-            <select
-              onChange={(event) => setForm((currentForm) => ({ ...currentForm, productId: event.target.value }))}
-              required
-              value={form.productId}
-            >
-              <option value="">Select product</option>
-              {filteredItems.map((item) => (
-                <option key={item._id} value={item._id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            {shouldShowMatches ? (
+              <div className="inventory-search-results">
+                {matchedItems.map((item) => (
+                  <button
+                    key={item._id}
+                    className="inventory-search-result"
+                    onClick={() => handleSelectItem(item)}
+                    type="button"
+                  >
+                    <strong>{item.name}</strong>
+                    <span>
+                      {item.inventoryQuantity} {item.inventoryUnit}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <label className="field">
             <span>Quantity</span>
             <input
@@ -125,44 +232,26 @@ export function InventoryPage() {
           </label>
           <label className="field">
             <span>Unit</span>
-            <select onChange={(event) => setForm((currentForm) => ({ ...currentForm, unit: event.target.value }))} value={form.unit}>
+            <select
+              onChange={(event) => setForm((currentForm) => ({ ...currentForm, unit: event.target.value }))}
+              value={form.unit}
+            >
               <option value="pcs">pcs</option>
               <option value="gr">gr</option>
               <option value="ml">ml</option>
             </select>
           </label>
-        </div>
-        {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-        <div className="button-row">
-          <button className="primary-button" disabled={isSubmitting} type="submit">
-            {isSubmitting ? 'Updating...' : 'Add Stock'}
-          </button>
-        </div>
-      </form>
-
-      <div className="panel">
-        <div className="panel-heading">
-          <h3>Tracked Products</h3>
-          <span className="panel-count">{filteredItems.length} visible</span>
-        </div>
-        {isLoading ? <p>Loading inventory...</p> : null}
-        {!isLoading && items.length === 0 ? <p>No tracked products yet. Enable inventory tracking from Products.</p> : null}
-        <div className="inventory-list">
-          {filteredItems.map((item) => (
-            <article key={item._id} className="inventory-row">
-              <div className="inventory-row-image">
-                {item.imageDataUrl ? <img alt={item.name} src={item.imageDataUrl} /> : <span>No image</span>}
-              </div>
-              <div className="inventory-row-copy">
-                <strong>{item.name}</strong>
-                <span>
-                  {item.inventoryQuantity} {item.inventoryUnit}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
+          {selectedItem ? (
+            <div className="inventory-selected-product">
+              <strong>{selectedItem.name}</strong>
+              <span>
+                Current stock: {selectedItem.inventoryQuantity} {selectedItem.inventoryUnit}
+              </span>
+            </div>
+          ) : null}
+          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+        </form>
+      </FormModal>
     </section>
   );
 }

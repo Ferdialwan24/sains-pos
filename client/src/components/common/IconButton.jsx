@@ -1,4 +1,12 @@
 const icons = {
+  view: (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path
+        d="M12 5c5.5 0 9.6 4.2 10.8 6-.9 1.5-5 8-10.8 8S2.4 12.5 1.2 11C2.4 9.2 6.5 5 12 5Zm0 3.2A2.8 2.8 0 1 0 12 14a2.8 2.8 0 0 0 0-5.8Z"
+        fill="currentColor"
+      />
+    </svg>
+  ),
   edit: (
     <svg aria-hidden="true" viewBox="0 0 24 24">
       <path

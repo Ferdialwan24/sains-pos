@@ -10,7 +10,8 @@ const defaultForm = {
   name: '',
   price: '',
   imageDataUrl: null,
-  trackInventory: false
+  trackInventory: false,
+  lowStockThreshold: ''
 };
 
 const readFileAsDataUrl = (file) =>
@@ -31,6 +32,7 @@ export function ProductsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updatingProductId, setUpdatingProductId] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   const formTitle = useMemo(() => (editingProductId ? 'Edit Product' : 'Add Product'), [editingProductId]);
@@ -104,7 +106,9 @@ export function ProductsPage() {
       name: product.name,
       price: String(product.price),
       imageDataUrl: product.imageDataUrl ?? null,
-      trackInventory: product.trackInventory ?? false
+      trackInventory: product.trackInventory ?? false,
+      lowStockThreshold:
+        product.trackInventory && (product.lowStockThreshold ?? 0) > 0 ? String(product.lowStockThreshold) : ''
     });
     setErrorMessage('');
     setIsModalOpen(true);
@@ -120,7 +124,8 @@ export function ProductsPage() {
         name: form.name,
         price: Number(form.price),
         imageDataUrl: form.imageDataUrl,
-        trackInventory: form.trackInventory
+        trackInventory: form.trackInventory,
+        lowStockThreshold: form.trackInventory ? Number(form.lowStockThreshold) : 0
       };
 
       if (editingProductId) {
@@ -189,6 +194,35 @@ export function ProductsPage() {
     }
   };
 
+  const handleToggleProductActive = async (product) => {
+    setUpdatingProductId(product._id);
+    setErrorMessage('');
+
+    try {
+      await apiRequest(`/products/${product._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          isActive: !product.isActive
+        })
+      });
+      await loadProducts();
+      showToast({
+        title: product.isActive ? 'Product hidden from POS' : 'Product visible in POS',
+        message: `${product.name} ${product.isActive ? 'will no longer appear' : 'is now available'} in POS.`,
+        type: 'success'
+      });
+    } catch (error) {
+      setErrorMessage(error.message);
+      showToast({
+        title: 'Product status update failed',
+        message: error.message,
+        type: 'error'
+      });
+    } finally {
+      setUpdatingProductId(null);
+    }
+  };
+
   return (
     <section className="page">
       <div className="page-header">
@@ -201,46 +235,63 @@ export function ProductsPage() {
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}
 
-      <div className="panel">
-        <div className="panel-heading">
-          <div className="panel-heading-left">
-            <button className="primary-button" onClick={handleOpenCreate} type="button">
-              Add Product
-            </button>
+      <div className="user-list-section">
+        <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
+          Add Product
+        </button>
+
+        <div className="panel product-list-panel">
+          <div className="panel-heading user-list-heading">
             <h3>Product List</h3>
           </div>
-          <span className="panel-count">{products.length} total</span>
-        </div>
-        {isLoading ? <p>Loading products...</p> : null}
-        {!isLoading && products.length === 0 ? <p>No products yet.</p> : null}
-        <div className="product-list-grid">
-          {products.map((product) => (
-            <article key={product._id} className="product-list-card">
-              <div className="product-list-image">
-                {product.imageDataUrl ? <img alt={product.name} src={product.imageDataUrl} /> : <span>No image</span>}
-              </div>
-              <div className="product-list-copy">
-                <strong>{product.name}</strong>
+          {isLoading ? <p>Loading products...</p> : null}
+          {!isLoading && products.length === 0 ? <p>No products yet.</p> : null}
+          <div className="report-table product-table">
+            {products.length > 0 ? (
+              <article className="report-row report-row-header product-row product-row-header">
+                <strong>Image</strong>
+                <strong>Product Name</strong>
+                <strong>Price</strong>
+                <strong>POS Active</strong>
+                <strong>Action</strong>
+              </article>
+            ) : null}
+            {products.map((product) => (
+              <article key={product._id} className="report-row product-row">
+                <div className="product-table-image">
+                  {product.imageDataUrl ? <img alt={product.name} src={product.imageDataUrl} /> : <span>No image</span>}
+                </div>
+                <div className="product-name-cell">
+                  <strong>{product.name}</strong>
+                </div>
                 <span>{formatCurrency(product.price)}</span>
-                {product.trackInventory ? (
-                  <span className={`pill ${product.inventoryQuantity > 0 ? 'pill-active' : 'pill-available'}`}>
-                    Stock {product.inventoryQuantity} {product.inventoryUnit}
+                <div className="product-visibility-cell">
+                  <button
+                    aria-label={product.isActive ? 'Hide product from POS' : 'Show product in POS'}
+                    aria-pressed={product.isActive}
+                    className={`toggle-switch${product.isActive ? ' toggle-switch-active' : ''}`}
+                    disabled={updatingProductId === product._id}
+                    onClick={() => handleToggleProductActive(product)}
+                    type="button"
+                  >
+                    <span />
+                  </button>
+                  <span className={`pill ${product.isActive ? 'pill-success' : 'pill-available'}`}>
+                    {product.isActive ? 'Active' : 'Hidden'}
                   </span>
-                ) : (
-                  <span className="pill pill-available">Inventory off</span>
-                )}
-              </div>
-              <div className="row-actions">
-                <IconButton icon="edit" label="Edit product" onClick={() => handleEdit(product)} />
-                <IconButton
-                  icon="delete"
-                  label="Delete product"
-                  onClick={() => setDeletingProduct(product)}
-                  variant="danger"
-                />
-              </div>
-            </article>
-          ))}
+                </div>
+                <div className="row-actions product-row-actions">
+                  <IconButton icon="edit" label="Edit product" onClick={() => handleEdit(product)} />
+                  <IconButton
+                    icon="delete"
+                    label="Delete product"
+                    onClick={() => setDeletingProduct(product)}
+                    variant="danger"
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -298,6 +349,20 @@ export function ProductsPage() {
               <span />
             </button>
           </label>
+          {form.trackInventory ? (
+            <label className="field">
+              <span>Low Stock Alert Threshold</span>
+              <input
+                min="1"
+                name="lowStockThreshold"
+                onChange={handleChange}
+                placeholder="10"
+                required
+                type="number"
+                value={form.lowStockThreshold}
+              />
+            </label>
+          ) : null}
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
         </form>
       </FormModal>
@@ -314,4 +379,3 @@ export function ProductsPage() {
     </section>
   );
 }
-

@@ -30,6 +30,11 @@ const productSchema = new mongoose.Schema(
       enum: ['pcs', 'gr', 'ml', null],
       default: 'pcs'
     },
+    lowStockThreshold: {
+      type: Number,
+      min: 0,
+      default: 0
+    },
     isActive: {
       type: Boolean,
       default: true
