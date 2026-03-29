@@ -16,8 +16,12 @@ export const formatCompactCurrency = (value) =>
 
 export const formatDateTime = (value) =>
   new Intl.DateTimeFormat('en-MY', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
   }).format(new Date(value));
 
 export const formatDateOnly = (value) =>

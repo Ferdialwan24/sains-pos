@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency } from '../../lib/format.js';
 import { useToast } from '../../hooks/useToast.js';
 
 export function PosPage() {
+  const eyebrow = useRoleEyebrow('Cashier');
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [searchParams] = useSearchParams();
@@ -256,7 +258,7 @@ export function PosPage() {
     <section className="page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Cashier</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2>Point of Sale</h2>
         </div>
         <p className="muted">This screen opens or updates the active bill for a selected table.</p>

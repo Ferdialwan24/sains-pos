@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FormModal } from '../../components/common/FormModal.jsx';
+import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
 
@@ -11,6 +12,7 @@ const defaultForm = {
 };
 
 export function InventoryPage() {
+  const eyebrow = useRoleEyebrow('Admin');
   const { showToast } = useToast();
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(defaultForm);
@@ -110,7 +112,7 @@ export function InventoryPage() {
     <section className="page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Admin</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2>Inventory</h2>
         </div>
         <p className="muted">Only products with active inventory tracking appear here.</p>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiRequest } from '../../lib/api.js';
 import { formatCompactCurrency, formatCurrency } from '../../lib/format.js';
 import { buildDateRangeParams } from '../../lib/dateRange.js';
+import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 
 const rangeOptions = [
   { value: 'today', label: 'Today' },
@@ -101,6 +102,7 @@ const formatSummaryValue = (key, value) => {
 };
 
 export function DashboardPage() {
+  const eyebrow = useRoleEyebrow('Admin');
   const [rangeMode, setRangeMode] = useState('today');
   const [analytics, setAnalytics] = useState({
     summary: {
@@ -187,7 +189,7 @@ export function DashboardPage() {
     <section className="page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Admin</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2>Sales Dashboard</h2>
         </div>
         <div className="dashboard-filter-stack">

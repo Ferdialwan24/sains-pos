@@ -9,6 +9,7 @@ import {
   isRangeLongerThanThreeMonths
 } from '../../lib/dateRange.js';
 import { useDismissibleLayer } from '../../hooks/useDismissibleLayer.js';
+import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 
 const filterOptions = [
   { value: 'today', label: 'Today' },
@@ -18,6 +19,7 @@ const filterOptions = [
 ];
 
 export function SalesReportsPage() {
+  const eyebrow = useRoleEyebrow('Admin');
   const [transactions, setTransactions] = useState([]);
   const [rangeMode, setRangeMode] = useState('today');
   const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
@@ -128,7 +130,7 @@ export function SalesReportsPage() {
     <section className="page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Admin</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2>Sales Reports</h2>
         </div>
         <button className="primary-button" disabled={transactions.length === 0} onClick={handleDownload} type="button">

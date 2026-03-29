@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog.jsx';
 import { FormModal } from '../../components/common/FormModal.jsx';
 import { IconButton } from '../../components/common/IconButton.jsx';
+import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency } from '../../lib/format.js';
@@ -23,6 +24,7 @@ const readFileAsDataUrl = (file) =>
   });
 
 export function ProductsPage() {
+  const eyebrow = useRoleEyebrow('Admin');
   const { showToast } = useToast();
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState(defaultForm);
@@ -227,7 +229,7 @@ export function ProductsPage() {
     <section className="page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Admin</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2>Manage Products</h2>
         </div>
         <p className="muted">Products now focus on name, price, image, and optional stock tracking.</p>

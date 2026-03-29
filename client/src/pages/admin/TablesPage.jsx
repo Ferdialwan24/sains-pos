@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog.jsx';
 import { FormModal } from '../../components/common/FormModal.jsx';
 import { IconButton } from '../../components/common/IconButton.jsx';
+import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
 
@@ -10,6 +11,7 @@ const defaultForm = {
 };
 
 export function TablesPage() {
+  const eyebrow = useRoleEyebrow('Admin');
   const { showToast } = useToast();
   const [tables, setTables] = useState([]);
   const [form, setForm] = useState(defaultForm);
@@ -142,7 +144,7 @@ export function TablesPage() {
     <section className="page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Admin</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2>Manage Tables</h2>
         </div>
         <p className="muted">Set up the physical tables before cashiers start opening bills.</p>

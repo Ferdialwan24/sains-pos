@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { downloadReceiptPdf } from '../../lib/downloads.js';
+import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency, formatDateTime } from '../../lib/format.js';
 
 export function TransactionReceiptPage() {
+  const eyebrow = useRoleEyebrow('Receipt');
   const { transactionId } = useParams();
   const [transaction, setTransaction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +32,7 @@ export function TransactionReceiptPage() {
     <section className="page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Receipt</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2>Transaction Detail</h2>
         </div>
         <div className="button-row">

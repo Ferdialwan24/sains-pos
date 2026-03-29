@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FormModal } from '../../components/common/FormModal.jsx';
 import { IconButton } from '../../components/common/IconButton.jsx';
+import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
 import { getPresetDateRange } from '../../lib/dateRange.js';
-import { downloadReceiptPdf } from '../../lib/downloads.js';
+import { downloadReceiptPdfFromElement } from '../../lib/downloads.js';
 import { formatCurrency, formatDateTime } from '../../lib/format.js';
 
 const dateFilterOptions = [
@@ -18,66 +19,95 @@ const statusFilterOptions = [
   { label: 'Cancel', value: 'cancel' }
 ];
 
-const ReceiptContent = ({ transaction }) => {
+const ReceiptContent = ({ transaction, receiptRef = null }) => {
   if (!transaction) {
     return null;
   }
 
   return (
-    <div className="receipt-panel receipt-modal-panel">
+    <div className="receipt-panel receipt-modal-panel" ref={receiptRef}>
       <div className="receipt-header">
-        <div>
-          <h3>Sains POS</h3>
-          <p className="muted compact-text">Invoice {transaction.invoiceNo}</p>
-          <p className="muted compact-text">Customer {transaction.customerName}</p>
-          <p className="muted compact-text">Table {transaction.tableNumber}</p>
-          <p className="muted compact-text">Served by {transaction.cashier?.fullName ?? '-'}</p>
-        </div>
-        <div className="receipt-meta">
-          <span>{formatDateTime(transaction.createdAt)}</span>
-          <span className="capitalize-text">{transaction.status}</span>
-        </div>
-      </div>
-
-      <div className="receipt-grid">
-        <article className="list-row">
-          <span>Payment Method</span>
-          <strong className="capitalize-text">{transaction.paymentMethod}</strong>
-        </article>
-        <article className="list-row">
-          <span>Total Amount</span>
-          <strong>{formatCurrency(transaction.totalAmount)}</strong>
-        </article>
-      </div>
-
-      <div className="simple-list">
-        {transaction.items.map((item) => (
-          <article key={`${transaction._id}-${item.product}`} className="list-row">
-            <div>
-              <strong>{item.name}</strong>
-              <p className="muted compact-text">
-                {item.quantity} x {formatCurrency(item.price)}
-              </p>
+        <div className="receipt-header-copy">
+          <h3>SAINS-POS</h3>
+          <div className="receipt-detail-lines">
+            <div className="receipt-detail-line">
+              <span>Invoice</span>
+              <span>:</span>
+              <span>{transaction.invoiceNo}</span>
             </div>
-            <span>{formatCurrency(item.lineTotal)}</span>
+            <div className="receipt-detail-line">
+              <span>Customer</span>
+              <span>:</span>
+              <span>{transaction.customerName}</span>
+            </div>
+            <div className="receipt-detail-line">
+              <span>Table</span>
+              <span>:</span>
+              <span>{transaction.tableNumber}</span>
+            </div>
+            <div className="receipt-detail-line">
+              <span>Served By</span>
+              <span>:</span>
+              <span>{transaction.cashier?.fullName ?? '-'}</span>
+            </div>
+            <div className="receipt-detail-line">
+              <span>Date</span>
+              <span>:</span>
+              <span>{formatDateTime(transaction.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+        <div className="receipt-status-row">
+          <span className={`pill receipt-status-pill ${transaction.status === 'paid' ? 'pill-success' : 'pill-cancel'}`}>
+            {transaction.status}
+          </span>
+        </div>
+      </div>
+
+      <div className="receipt-divider" />
+
+      <div className="receipt-section-heading">
+        <span>Order Items</span>
+      </div>
+      <div className="receipt-items">
+        {transaction.items.map((item) => (
+          <article key={`${transaction._id}-${item.product}`} className="receipt-item-row">
+            <div className="receipt-item-top">
+              <strong>{item.name}</strong>
+              <span>{formatCurrency(item.lineTotal)}</span>
+            </div>
+            <p className="receipt-item-meta">
+              {item.quantity} x {formatCurrency(item.price)}
+            </p>
           </article>
         ))}
       </div>
 
-      <div className="summary-total">
-        <span>Total</span>
-        <strong>{formatCurrency(transaction.totalAmount)}</strong>
+      <div className="receipt-divider" />
+
+      <div className="receipt-footer-summary">
+        <div className="receipt-total-row">
+          <span>GRAND TOTAL</span>
+          <span>:</span>
+          <strong>{formatCurrency(transaction.totalAmount)}</strong>
+        </div>
+        <div className="receipt-total-row receipt-payment-row">
+          <span>PAYMENT METHOD</span>
+          <span>:</span>
+          <strong className="capitalize-text">{transaction.paymentMethod}</strong>
+        </div>
       </div>
     </div>
   );
 };
 
 export function TransactionsPageLive() {
+  const eyebrow = useRoleEyebrow('Cashier');
+  const detailReceiptRef = useRef(null);
   const [transactions, setTransactions] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('today');
   const [detailTransaction, setDetailTransaction] = useState(null);
-  const [receiptTransaction, setReceiptTransaction] = useState(null);
   const [activeTransactionId, setActiveTransactionId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
@@ -138,44 +168,26 @@ export function TransactionsPageLive() {
     setDetailErrorMessage('');
   };
 
-  const closeReceiptModal = () => {
-    setReceiptTransaction(null);
-  };
-
-  const handleOpenReceipt = (transaction) => {
-    setReceiptTransaction(transaction);
-  };
-
-  const handleOpenReceiptFromDetail = () => {
-    if (!detailTransaction) {
-      return;
-    }
-
-    const transaction = detailTransaction;
-    closeDetailModal();
-    setReceiptTransaction(transaction);
-  };
-
   const isDetailModalOpen = Boolean(activeTransactionId);
 
   return (
     <section className="page">
       <div className="page-header">
         <div>
-          <p className="eyebrow">Cashier</p>
+          <p className="eyebrow">{eyebrow}</p>
           <h2>Transactions</h2>
         </div>
         <p className="muted">Final transactions are shown here with payment and cashier details.</p>
       </div>
 
-      <div className="panel transaction-filter-panel">
+      <div className="transaction-filter-panel">
         <div className="transaction-filter-groups">
           <div className="range-switch">
-            {dateFilterOptions.map((option) => (
+            {statusFilterOptions.map((option) => (
               <button
-                key={option.value}
-                className={`range-switch-button${dateFilter === option.value ? ' range-switch-button-active' : ''}`}
-                onClick={() => setDateFilter(option.value)}
+                key={option.value || 'all'}
+                className={`range-switch-button${statusFilter === option.value ? ' range-switch-button-active' : ''}`}
+                onClick={() => setStatusFilter(option.value)}
                 type="button"
               >
                 {option.label}
@@ -183,11 +195,11 @@ export function TransactionsPageLive() {
             ))}
           </div>
           <div className="range-switch">
-            {statusFilterOptions.map((option) => (
+            {dateFilterOptions.map((option) => (
               <button
-                key={option.value || 'all'}
-                className={`range-switch-button${statusFilter === option.value ? ' range-switch-button-active' : ''}`}
-                onClick={() => setStatusFilter(option.value)}
+                key={option.value}
+                className={`range-switch-button${dateFilter === option.value ? ' range-switch-button-active' : ''}`}
+                onClick={() => setDateFilter(option.value)}
                 type="button"
               >
                 {option.label}
@@ -237,10 +249,16 @@ export function TransactionsPageLive() {
             <button
               className="primary-button"
               disabled={!detailTransaction}
-              onClick={handleOpenReceiptFromDetail}
+              onClick={() =>
+                detailTransaction &&
+                downloadReceiptPdfFromElement({
+                  element: detailReceiptRef.current,
+                  title: detailTransaction.invoiceNo
+                })
+              }
               type="button"
             >
-              Receipt
+              Download Receipt
             </button>
           </>
         }
@@ -250,30 +268,9 @@ export function TransactionsPageLive() {
       >
         {isDetailLoading ? <p>Loading transaction detail...</p> : null}
         {detailErrorMessage ? <p className="form-error">{detailErrorMessage}</p> : null}
-        {!isDetailLoading && !detailErrorMessage && detailTransaction ? <ReceiptContent transaction={detailTransaction} /> : null}
-      </FormModal>
-
-      <FormModal
-        footer={
-          <>
-            <button className="secondary-button" onClick={closeReceiptModal} type="button">
-              Close
-            </button>
-            <button
-              className="primary-button"
-              disabled={!receiptTransaction}
-              onClick={() => downloadReceiptPdf(receiptTransaction)}
-              type="button"
-            >
-              Download PDF
-            </button>
-          </>
-        }
-        isOpen={Boolean(receiptTransaction)}
-        onClose={closeReceiptModal}
-        title={receiptTransaction ? `Receipt ${receiptTransaction.invoiceNo}` : 'Receipt'}
-      >
-        <ReceiptContent transaction={receiptTransaction} />
+        {!isDetailLoading && !detailErrorMessage && detailTransaction ? (
+          <ReceiptContent receiptRef={detailReceiptRef} transaction={detailTransaction} />
+        ) : null}
       </FormModal>
     </section>
   );
