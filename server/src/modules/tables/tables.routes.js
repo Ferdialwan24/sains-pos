@@ -7,6 +7,7 @@ import {
   checkoutTableBillController,
   createTableController,
   deleteTableController,
+  getTableActiveOrderController,
   getTableDetailController,
   listTablesController,
   openTableBillController,
@@ -20,6 +21,7 @@ export const tablesRouter = Router();
 tablesRouter.use(authenticate);
 
 tablesRouter.get('/', listTablesController);
+tablesRouter.get('/:tableId/active-order', getTableActiveOrderController);
 tablesRouter.get('/:tableId', getTableDetailController);
 tablesRouter.post('/', authorize(ROLES.ADMIN), createTableController);
 tablesRouter.patch('/:tableId', authorize(ROLES.ADMIN), updateTableController);

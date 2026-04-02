@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ORDER_TYPE, ORDER_TYPE_VALUES } from '../constants/orderType.js';
 import { TRANSACTION_STATUS, TRANSACTION_STATUS_VALUES } from '../constants/transactionStatus.js';
 
 const transactionItemSchema = new mongoose.Schema(
@@ -41,14 +42,20 @@ const transactionSchema = new mongoose.Schema(
       required: true,
       unique: true
     },
+    orderType: {
+      type: String,
+      enum: ORDER_TYPE_VALUES,
+      default: ORDER_TYPE.DINE_IN,
+      required: true
+    },
     table: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Table',
-      required: true
+      default: null
     },
     tableNumber: {
       type: Number,
-      required: true
+      default: null
     },
     cashier: {
       type: mongoose.Schema.Types.ObjectId,
@@ -103,4 +110,3 @@ const transactionSchema = new mongoose.Schema(
 transactionSchema.index({ createdAt: -1 });
 
 export const Transaction = mongoose.model('Transaction', transactionSchema);
-

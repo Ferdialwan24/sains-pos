@@ -4,6 +4,7 @@ import {
   checkoutTableBill,
   createTable,
   deleteTable,
+  getTableActiveOrder,
   getTableDetail,
   listTables,
   openTableBill,
@@ -25,6 +26,14 @@ export const getTableDetailController = asyncHandler(async (request, response) =
 
   response.json({
     table
+  });
+});
+
+export const getTableActiveOrderController = asyncHandler(async (request, response) => {
+  const activeOrder = await getTableActiveOrder(request.params.tableId);
+
+  response.json({
+    activeOrder
   });
 });
 

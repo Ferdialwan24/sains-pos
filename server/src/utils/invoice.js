@@ -6,6 +6,5 @@ export const createInvoiceNumber = () => {
     .replaceAll('-', '');
   const randomPart = Math.floor(Math.random() * 9000 + 1000);
 
-  return `INV-${datePart}-${randomPart}`;
+  return `SP-${datePart}-${randomPart}`;
 };
-

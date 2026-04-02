@@ -1,50 +1,76 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency } from '../../lib/format.js';
 import { useToast } from '../../hooks/useToast.js';
 
+const ORDER_TYPE = {
+  DINE_IN: 'dine_in',
+  TAKEAWAY: 'takeaway'
+};
+
+const normalizeOrderItem = (item) => ({
+  productId: String(item.product?._id ?? item.product),
+  name: item.name,
+  price: item.price,
+  quantity: Number(item.quantity),
+  lineTotal: item.price * Number(item.quantity)
+});
+
 export function PosPage() {
   const eyebrow = useRoleEyebrow('Cashier');
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [searchParams] = useSearchParams();
-  const tableId = searchParams.get('tableId');
-  const [table, setTable] = useState(null);
+  const activeOrderIdParam = searchParams.get('activeOrderId');
+  const tableIdParam = searchParams.get('tableId');
   const [products, setProducts] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [orderType, setOrderType] = useState(ORDER_TYPE.DINE_IN);
   const [customerName, setCustomerName] = useState('');
-  const [quantities, setQuantities] = useState({});
-  const [existingQuantities, setExistingQuantities] = useState({});
+  const [selectedTableId, setSelectedTableId] = useState('');
+  const [orderItems, setOrderItems] = useState([]);
+  const [loadedActiveOrderId, setLoadedActiveOrderId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUpdatingBill, setIsUpdatingBill] = useState(false);
-  const [isRemovingItemId, setIsRemovingItemId] = useState('');
+  const [isSavingBill, setIsSavingBill] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const mapExistingQuantities = (activeOrderItems = []) =>
-    activeOrderItems.reduce((accumulator, item) => {
-      accumulator[String(item.product)] = item.quantity;
-      return accumulator;
-    }, {});
+  const resetDraft = () => {
+    setOrderType(ORDER_TYPE.DINE_IN);
+    setCustomerName('');
+    setSelectedTableId('');
+    setOrderItems([]);
+    setLoadedActiveOrderId('');
+  };
 
   useEffect(() => {
     const loadPageData = async () => {
       setIsLoading(true);
 
       try {
-        const productsResponse = await apiRequest('/products');
-        setProducts(productsResponse.products);
+        const [productsResponse, tablesResponse] = await Promise.all([apiRequest('/products'), apiRequest('/tables')]);
 
-        if (tableId) {
-          const tableResponse = await apiRequest(`/tables/${tableId}`);
-          setTable(tableResponse.table);
-          setCustomerName(tableResponse.table.activeOrder?.customerName ?? '');
-          setExistingQuantities(mapExistingQuantities(tableResponse.table.activeOrder?.items));
+        setProducts(productsResponse.products);
+        setTables(tablesResponse.tables);
+
+        if (activeOrderIdParam) {
+          const activeOrderResponse = await apiRequest(`/active-orders/${activeOrderIdParam}`);
+          const activeOrder = activeOrderResponse.activeOrder;
+
+          setLoadedActiveOrderId(activeOrder._id);
+          setOrderType(activeOrder.orderType ?? ORDER_TYPE.DINE_IN);
+          setCustomerName(activeOrder.customerName ?? '');
+          setSelectedTableId(String(activeOrder.table?._id ?? activeOrder.table ?? ''));
+          setOrderItems((activeOrder.items ?? []).map(normalizeOrderItem));
         } else {
-          setTable(null);
-          setCustomerName('');
-          setExistingQuantities({});
+          resetDraft();
+
+          if (tableIdParam) {
+            setSelectedTableId(tableIdParam);
+          }
         }
 
         setErrorMessage('');
@@ -56,338 +82,424 @@ export function PosPage() {
     };
 
     loadPageData();
-  }, [tableId]);
+  }, [activeOrderIdParam, tableIdParam]);
 
-  const updateQuantity = (productId, nextQuantity) => {
-    const product = products.find((item) => item._id === productId);
+  const selectableTables = useMemo(
+    () => tables.filter((table) => table.status === 'available' || table._id === selectedTableId),
+    [selectedTableId, tables]
+  );
+
+  const selectedTable = tables.find((table) => table._id === selectedTableId) ?? null;
+  const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
+  const activeTableCount = tables.filter((table) => table.status === 'active').length;
+
+  const validateDraft = ({ requireTable = orderType === ORDER_TYPE.DINE_IN } = {}) => {
+    if (!customerName.trim()) {
+      throw new Error('Customer name is required');
+    }
+
+    if (orderItems.length === 0) {
+      throw new Error('Select at least one product item');
+    }
+
+    if (requireTable && !selectedTableId) {
+      throw new Error('Table is required for dine-in orders');
+    }
+  };
+
+  const setProductQuantity = (product, nextQuantity) => {
     const maxOrderQuantity = product?.availability?.maxOrderQuantity;
     const boundedQuantity =
       maxOrderQuantity === null || maxOrderQuantity === undefined
         ? nextQuantity
         : Math.min(nextQuantity, maxOrderQuantity);
+    const safeQuantity = Math.max(0, boundedQuantity);
 
-    setQuantities((currentState) => ({
-      ...currentState,
-      [productId]: Math.max(0, boundedQuantity)
-    }));
+    setOrderItems((currentItems) => {
+      const nextItems = currentItems.filter((item) => item.productId !== product._id);
+
+      if (safeQuantity === 0) {
+        return nextItems;
+      }
+
+      return [
+        ...nextItems,
+        {
+          productId: product._id,
+          name: product.name,
+          price: product.price,
+          quantity: safeQuantity,
+          lineTotal: product.price * safeQuantity
+        }
+      ];
+    });
   };
 
-  const selectedItems = products
-    .filter((product) => Number(quantities[product._id] ?? 0) > 0)
-    .map((product) => ({
-      productId: product._id,
-      name: product.name,
-      price: product.price,
-      quantity: Number(quantities[product._id]),
-      lineTotal: product.price * Number(quantities[product._id])
-    }));
+  const syncLoadedActiveOrder = async () => {
+    if (!loadedActiveOrderId) {
+      return null;
+    }
 
-  const subtotal = selectedItems.reduce((sum, item) => sum + item.lineTotal, 0);
-
-  const currentBillItems =
-    table?.activeOrder?.items?.map((item) => ({
-      ...item,
-      quantity: Number(existingQuantities[String(item.product)] ?? item.quantity),
-      lineTotal: item.price * Number(existingQuantities[String(item.product)] ?? item.quantity)
-    })) ?? [];
-
-  const updateExistingQuantity = (productId, nextQuantity) => {
-    setExistingQuantities((currentState) => ({
-      ...currentState,
-      [productId]: Math.max(1, nextQuantity)
-    }));
+    return apiRequest(`/active-orders/${loadedActiveOrderId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        customerName,
+        tableId: selectedTableId || null,
+        items: orderItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity
+        }))
+      })
+    });
   };
 
-  const reloadTable = async () => {
-    if (!tableId) {
-      return;
-    }
-
-    const [tableResponse, productsResponse] = await Promise.all([
-      apiRequest(`/tables/${tableId}`),
-      apiRequest('/products')
-    ]);
-
-    setTable(tableResponse.table);
-    setProducts(productsResponse.products);
-    setCustomerName(tableResponse.table.activeOrder?.customerName ?? '');
-    setExistingQuantities(mapExistingQuantities(tableResponse.table.activeOrder?.items));
-  };
-
-  const handleSubmit = async () => {
-    if (!tableId || selectedItems.length === 0) {
-      const message = 'Select at least one product item';
-      setErrorMessage(message);
-      showToast({
-        title: 'Cannot save bill',
-        message,
-        type: 'error'
-      });
-      return;
-    }
-
-    if (!customerName.trim()) {
-      const message = 'Customer name is required';
-      setErrorMessage(message);
-      showToast({
-        title: 'Cannot save bill',
-        message,
-        type: 'error'
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage('');
-
+  const handleSaveBill = async () => {
     try {
-      const endpoint = table?.status === 'active' ? `/tables/${tableId}/items` : `/tables/${tableId}/open-bill`;
-      await apiRequest(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({
-          customerName,
-          items: selectedItems.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity
-          }))
-        })
-      });
+      validateDraft({ requireTable: true });
+      setIsSavingBill(true);
+      setErrorMessage('');
+
+      if (loadedActiveOrderId) {
+        await syncLoadedActiveOrder();
+      } else {
+        await apiRequest('/active-orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            orderType: ORDER_TYPE.DINE_IN,
+            customerName,
+            tableId: selectedTableId,
+            items: orderItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity
+            }))
+          })
+        });
+      }
 
       showToast({
-        title: table?.status === 'active' ? 'Item added to bill' : 'Bill opened',
-        message:
-          table?.status === 'active'
-            ? `${selectedItems.length} new item(s) added for ${customerName}.`
-            : `Bill for ${customerName} on table ${table?.number} is now active.`,
+        title: 'Bill saved',
+        message: `Open bill for ${customerName} is now attached to table ${selectedTable?.number}.`,
         type: 'success'
       });
       navigate('/cashier/tables');
     } catch (error) {
       setErrorMessage(error.message);
       showToast({
-        title: 'Bill save failed',
+        title: 'Save bill failed',
         message: error.message,
         type: 'error'
       });
     } finally {
-      setIsSubmitting(false);
+      setIsSavingBill(false);
     }
   };
 
-  const handleUpdateCurrentBill = async () => {
-    if (!tableId || !table?.activeOrder) {
+  const handlePay = async () => {
+    try {
+      validateDraft();
+      setIsPaying(true);
+      setErrorMessage('');
+
+      let response;
+
+      if (loadedActiveOrderId) {
+        await syncLoadedActiveOrder();
+        response = await apiRequest(`/transactions/checkout-active-order/${loadedActiveOrderId}`, {
+          method: 'POST',
+          body: JSON.stringify({
+            status: 'paid',
+            paymentMethod: 'cash'
+          })
+        });
+      } else {
+        response = await apiRequest('/transactions/checkout-direct', {
+          method: 'POST',
+          body: JSON.stringify({
+            orderType,
+            customerName,
+            tableId: orderType === ORDER_TYPE.DINE_IN ? selectedTableId : null,
+            items: orderItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity
+            })),
+            status: 'paid',
+            paymentMethod: 'cash'
+          })
+        });
+      }
+
+      showToast({
+        title: 'Payment completed',
+        message: `Invoice ${response.transaction.invoiceNo} was completed successfully.`,
+        type: 'success'
+      });
+      navigate('/cashier/pos');
+    } catch (error) {
+      setErrorMessage(error.message);
+      showToast({
+        title: 'Payment failed',
+        message: error.message,
+        type: 'error'
+      });
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const handleCancelBill = async () => {
+    if (!loadedActiveOrderId) {
       return;
     }
 
-    setIsUpdatingBill(true);
-    setErrorMessage('');
-
     try {
-      await apiRequest(`/tables/${tableId}/items`, {
-        method: 'PUT',
+      setIsCanceling(true);
+      setErrorMessage('');
+
+      const response = await apiRequest(`/transactions/checkout-active-order/${loadedActiveOrderId}`, {
+        method: 'POST',
         body: JSON.stringify({
-          customerName,
-          items: currentBillItems.map((item) => ({
-            productId: String(item.product),
-            quantity: item.quantity
-          }))
+          status: 'cancel',
+          paymentMethod: 'cash'
         })
       });
 
-      await reloadTable();
       showToast({
-        title: 'Bill updated',
-        message: `Current bill for ${customerName || `table ${table?.number}`} has been updated.`,
-        type: 'success'
+        title: 'Bill canceled',
+        message: `Open bill was closed as ${response.transaction.status}.`,
+        type: 'info'
       });
+      navigate('/cashier/pos');
     } catch (error) {
       setErrorMessage(error.message);
       showToast({
-        title: 'Bill update failed',
+        title: 'Cancel bill failed',
         message: error.message,
         type: 'error'
       });
     } finally {
-      setIsUpdatingBill(false);
-    }
-  };
-
-  const handleRemoveCurrentBillItem = async (productId) => {
-    if (!tableId) {
-      return;
-    }
-
-    setIsRemovingItemId(productId);
-    setErrorMessage('');
-
-    try {
-      const removedItem = currentBillItems.find((item) => String(item.product) === productId);
-      const response = await apiRequest(`/tables/${tableId}/items/${productId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.table?.status === 'available') {
-        showToast({
-          title: 'Item removed',
-          message: `${removedItem?.name ?? 'The item'} was removed and the table is now empty.`,
-          type: 'info'
-        });
-        navigate('/cashier/tables');
-        return;
-      }
-
-      await reloadTable();
-      showToast({
-        title: 'Item removed',
-        message: `${removedItem?.name ?? 'The item'} has been removed from the bill.`,
-        type: 'success'
-      });
-    } catch (error) {
-      setErrorMessage(error.message);
-      showToast({
-        title: 'Remove item failed',
-        message: error.message,
-        type: 'error'
-      });
-    } finally {
-      setIsRemovingItemId('');
+      setIsCanceling(false);
     }
   };
 
   return (
-    <section className="page">
+    <section className="page pos-page">
       <div className="page-header">
         <div>
           <p className="eyebrow">{eyebrow}</p>
           <h2>Point of Sale</h2>
         </div>
-        <p className="muted">This screen opens or updates the active bill for a selected table.</p>
+        <p className="muted">
+          Start every new order here. Dine-in can be saved as an open bill, while takeaway goes straight to payment.
+        </p>
       </div>
 
-      {!tableId ? (
-        <div className="panel">
-          Products are shown below. To create or update a bill, open this page from `Table Billing`
-          so a table is selected first.
-        </div>
-      ) : null}
       {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
 
       <div className="content-grid">
-        <div className="card-list">
+        <div className="panel pos-menu-panel">
+          <div className="panel-heading pos-menu-heading">
+            <div>
+              <p className="eyebrow">Menu</p>
+              <h3>Product Menu</h3>
+            </div>
+            <div className="pos-menu-heading-meta">
+              <span className="panel-count">{products.length} products</span>
+              <span className="panel-count">{activeTableCount} active table(s)</span>
+            </div>
+          </div>
           {isLoading ? <div className="panel">Loading POS data...</div> : null}
           {!isLoading && products.length === 0 ? <div className="panel">No products available yet.</div> : null}
-          {products.map((product) => {
-            const quantity = Number(quantities[product._id] ?? 0);
+          <div className="card-list pos-card-list">
+            {products.map((product) => {
+              const quantity = orderItems.find((item) => item.productId === product._id)?.quantity ?? 0;
 
-            return (
-              <article
-                key={product._id}
-                className={`product-card${product.availability?.isAvailable === false ? ' product-card-disabled' : ''}`}
-              >
-                <h3>{product.name}</h3>
-                <p>{formatCurrency(product.price)}</p>
-                <p className="muted compact-text">
-                  {product.availability?.isAvailable === false
-                    ? product.availability.reason || 'Unavailable'
-                    : product.availability?.maxOrderQuantity !== null &&
-                        product.availability?.maxOrderQuantity !== undefined
-                      ? `Ready for ${product.availability.maxOrderQuantity} order(s)`
-                      : 'Always available'}
-                </p>
-                <div className="quantity-control">
-                  <button
-                    disabled={product.availability?.isAvailable === false}
-                    onClick={() => updateQuantity(product._id, quantity - 1)}
-                    type="button"
-                  >
-                    -
-                  </button>
-                  <span>{quantity}</span>
-                  <button
-                    disabled={product.availability?.isAvailable === false}
-                    onClick={() => updateQuantity(product._id, quantity + 1)}
-                    type="button"
-                  >
-                    +
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+              return (
+                <article
+                  key={product._id}
+                  className={`product-card pos-product-card${
+                    product.availability?.isAvailable === false ? ' product-card-disabled' : ''
+                  }`}
+                >
+                  <div className="pos-product-media">
+                    {product.imageDataUrl ? <img alt={product.name} src={product.imageDataUrl} /> : <span>No image</span>}
+                  </div>
+                  <div className="pos-product-copy">
+                    <h3>{product.name}</h3>
+                    <strong>{formatCurrency(product.price)}</strong>
+                    <p className="muted compact-text">
+                      {product.availability?.isAvailable === false
+                        ? product.availability.reason || 'Unavailable'
+                        : product.availability?.maxOrderQuantity !== null &&
+                            product.availability?.maxOrderQuantity !== undefined
+                          ? `Ready for ${product.availability.maxOrderQuantity} order(s)`
+                          : 'Always available'}
+                    </p>
+                  </div>
+                  <div className="quantity-control pos-quantity-control">
+                    <button
+                      disabled={product.availability?.isAvailable === false}
+                      onClick={() => setProductQuantity(product, quantity - 1)}
+                      type="button"
+                    >
+                      -
+                    </button>
+                    <span>{quantity}</span>
+                    <button
+                      disabled={product.availability?.isAvailable === false}
+                      onClick={() => setProductQuantity(product, quantity + 1)}
+                      type="button"
+                    >
+                      +
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </div>
 
-        <aside className="summary-card">
-          <h3>{table ? `Table ${table.number}` : 'Order Summary'}</h3>
-          <label className="field">
-            <span>Customer Name</span>
-            <input onChange={(event) => setCustomerName(event.target.value)} value={customerName} />
-          </label>
-          {table?.activeOrder?.items?.length ? (
-            <>
-              <p className="muted">Current bill</p>
-              <div className="simple-list compact-list">
-                {currentBillItems.map((item) => (
-                  <article key={item.product} className="list-row list-row-stack">
+        <aside className="summary-card pos-summary-card">
+          <div className="pos-order-header">
+            <div>
+              <p className="eyebrow">Order</p>
+              <h3>
+                {loadedActiveOrderId
+                  ? `Loaded Bill${selectedTable ? ` - Table ${selectedTable.number}` : ''}`
+                  : orderType === ORDER_TYPE.DINE_IN
+                    ? 'Dine In Order'
+                    : 'Takeaway Order'}
+              </h3>
+            </div>
+            <div className="pos-mode-switch">
+              <button
+                className={`pos-mode-button${orderType === ORDER_TYPE.DINE_IN ? ' pos-mode-button-active' : ''}`}
+                disabled={Boolean(loadedActiveOrderId)}
+                onClick={() => {
+                  setOrderType(ORDER_TYPE.DINE_IN);
+                  setSelectedTableId((current) => current || tableIdParam || '');
+                }}
+                type="button"
+              >
+                Dine In
+              </button>
+              <button
+                className={`pos-mode-button${orderType === ORDER_TYPE.TAKEAWAY ? ' pos-mode-button-active' : ''}`}
+                disabled={Boolean(loadedActiveOrderId)}
+                onClick={() => {
+                  setOrderType(ORDER_TYPE.TAKEAWAY);
+                  setSelectedTableId('');
+                }}
+                type="button"
+              >
+                Takeaway
+              </button>
+            </div>
+          </div>
+
+          <div className="pos-summary-body">
+            <div className="pos-order-meta">
+              <label className="field pos-inline-field">
+                <span>Customer</span>
+                <input onChange={(event) => setCustomerName(event.target.value)} value={customerName} />
+              </label>
+
+              {orderType === ORDER_TYPE.DINE_IN ? (
+                <label className="field pos-inline-field">
+                  <span>Table</span>
+                  <select onChange={(event) => setSelectedTableId(event.target.value)} value={selectedTableId}>
+                    <option value="">Select a table</option>
+                    {selectableTables.map((table) => (
+                      <option key={table._id} value={table._id}>
+                        Table {table.number}
+                        {table.status === 'active' ? ' (Active)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+
+            <div className={`pos-items-card${orderType === ORDER_TYPE.TAKEAWAY ? ' pos-items-card-expanded' : ''}`}>
+              <div className="pos-summary-head">
+                <p className="muted">{loadedActiveOrderId ? 'Loaded order items' : 'Current order items'}</p>
+                <strong>{orderItems.length} item(s)</strong>
+              </div>
+
+              <div className="simple-list compact-list pos-order-list">
+                {orderItems.length === 0 ? <p>No items selected yet.</p> : null}
+                {orderItems.map((item) => (
+                  <article key={item.productId} className="list-row list-row-stack pos-order-item">
                     <div>
                       <strong>{item.name}</strong>
-                      <p className="muted compact-text">{formatCurrency(item.lineTotal)}</p>
+                      <p className="muted compact-text">
+                        {item.quantity} x {formatCurrency(item.price)}
+                      </p>
                     </div>
                     <div className="row-actions">
+                      <strong className="pos-order-line-total">{formatCurrency(item.lineTotal)}</strong>
                       <div className="quantity-control">
-                        <button onClick={() => updateExistingQuantity(String(item.product), item.quantity - 1)} type="button">
+                        <button
+                          onClick={() => {
+                            const product = products.find((entry) => entry._id === item.productId);
+
+                            if (product) {
+                              setProductQuantity(product, item.quantity - 1);
+                            }
+                          }}
+                          type="button"
+                        >
                           -
                         </button>
                         <span>{item.quantity}</span>
-                        <button onClick={() => updateExistingQuantity(String(item.product), item.quantity + 1)} type="button">
+                        <button
+                          onClick={() => {
+                            const product = products.find((entry) => entry._id === item.productId);
+
+                            if (product) {
+                              setProductQuantity(product, item.quantity + 1);
+                            }
+                          }}
+                          type="button"
+                        >
                           +
                         </button>
                       </div>
-                      <button
-                        className="ghost-button small-button"
-                        disabled={isRemovingItemId === String(item.product)}
-                        onClick={() => handleRemoveCurrentBillItem(String(item.product))}
-                        type="button"
-                      >
-                        {isRemovingItemId === String(item.product) ? 'Removing...' : 'Remove'}
-                      </button>
                     </div>
                   </article>
                 ))}
               </div>
-              <button
-                className="secondary-button"
-                disabled={isUpdatingBill}
-                onClick={handleUpdateCurrentBill}
-                type="button"
-              >
-                {isUpdatingBill ? 'Updating...' : 'Update Current Bill'}
-              </button>
-            </>
-          ) : null}
-          <p className="muted">New items</p>
-          <div className="simple-list compact-list">
-            {selectedItems.length === 0 ? <p>No new items selected.</p> : null}
-            {selectedItems.map((item) => (
-              <article key={item.productId} className="list-row">
-                <span>
-                  {item.name} x{item.quantity}
-                </span>
-                <span>{formatCurrency(item.lineTotal)}</span>
-              </article>
-            ))}
+            </div>
           </div>
+
           <div className="summary-total">
-            <span>New subtotal</span>
+            <span>Subtotal</span>
             <strong>{formatCurrency(subtotal)}</strong>
           </div>
-          <div className="button-row">
-            <button className="secondary-button" onClick={() => navigate('/cashier/tables')} type="button">
-              Back
-            </button>
-            <button className="primary-button" disabled={isSubmitting || isLoading} onClick={handleSubmit} type="button">
-              {isSubmitting ? 'Saving...' : table?.status === 'active' ? 'Add to Bill' : 'Open Bill'}
-            </button>
+
+          <div className="button-row pos-secondary-actions">
+            {orderType === ORDER_TYPE.DINE_IN ? (
+              <button
+                className="secondary-button"
+                disabled={isSavingBill || isLoading}
+                onClick={handleSaveBill}
+                type="button"
+              >
+                {isSavingBill ? 'Saving...' : 'Save Bill'}
+              </button>
+            ) : (
+              <span aria-hidden="true" className="pos-action-placeholder" />
+            )}
           </div>
+
+          <button className="primary-button pos-pay-button" disabled={isPaying || isLoading} onClick={handlePay} type="button">
+            {isPaying ? 'Processing...' : 'Pay'}
+          </button>
+
+          {loadedActiveOrderId ? (
+            <button className="ghost-button" disabled={isCanceling} onClick={handleCancelBill} type="button">
+              {isCanceling ? 'Canceling...' : 'Cancel Bill'}
+            </button>
+          ) : null}
         </aside>
       </div>
     </section>

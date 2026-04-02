@@ -6,6 +6,20 @@ import { Transaction } from '../../models/Transaction.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { createInvoiceNumber } from '../../utils/invoice.js';
 
+const tableActiveOrderPopulate = {
+  path: 'activeOrderId',
+  populate: [
+    {
+      path: 'createdBy',
+      select: 'fullName username role'
+    },
+    {
+      path: 'table',
+      select: 'number status activeOrderId'
+    }
+  ]
+};
+
 const mergeOrderItems = (currentItems, incomingItems) => {
   const mergedMap = new Map();
 
@@ -111,7 +125,28 @@ const getRequiredInventory = async (orderItems) => {
 
 const clearTableOrder = (table) => {
   table.status = TABLE_STATUS.AVAILABLE;
+  table.activeOrderId = null;
   table.activeOrder = null;
+};
+
+const mapLegacyActiveOrder = (table) => {
+  if (!table.activeOrder) {
+    return null;
+  }
+
+  return {
+    _id: null,
+    orderType: 'dine_in',
+    status: 'active',
+    customerName: table.activeOrder.customerName,
+    table: table._id,
+    tableNumber: table.number,
+    items: table.activeOrder.items,
+    subtotal: table.activeOrder.subtotal,
+    createdBy: table.activeOrder.openedBy,
+    createdAt: table.activeOrder.openedAt,
+    updatedAt: table.activeOrder.updatedAt
+  };
 };
 
 const ensureActiveTable = async (tableId) => {
@@ -128,7 +163,10 @@ const ensureActiveTable = async (tableId) => {
   return table;
 };
 
-export const listTables = async () => Table.find().sort({ number: 1 });
+export const listTables = async () =>
+  Table.find()
+    .populate(tableActiveOrderPopulate)
+    .sort({ number: 1 });
 
 export const createTable = async ({ number }) => {
   if (!Number.isInteger(number) || number <= 0) {
@@ -304,11 +342,33 @@ export const checkoutTableBill = async (tableId, { status, paymentMethod, cancel
 };
 
 export const getTableDetail = async (tableId) => {
-  const table = await Table.findById(tableId).populate('activeOrder.openedBy', 'fullName username role');
+  const table = await Table.findById(tableId)
+    .populate(tableActiveOrderPopulate)
+    .populate('activeOrder.openedBy', 'fullName username role');
 
   if (!table) {
     throw new ApiError(404, 'Table not found');
   }
 
   return table;
+};
+
+export const getTableActiveOrder = async (tableId) => {
+  const table = await Table.findById(tableId)
+    .populate(tableActiveOrderPopulate)
+    .populate('activeOrder.openedBy', 'fullName username role');
+
+  if (!table) {
+    throw new ApiError(404, 'Table not found');
+  }
+
+  if (table.activeOrderId) {
+    return table.activeOrderId;
+  }
+
+  if (table.activeOrder) {
+    return mapLegacyActiveOrder(table);
+  }
+
+  throw new ApiError(404, 'This table does not have an active bill');
 };

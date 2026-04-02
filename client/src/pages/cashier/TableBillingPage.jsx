@@ -3,18 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency } from '../../lib/format.js';
-import { useToast } from '../../hooks/useToast.js';
 
 export function TableBillingPage() {
   const eyebrow = useRoleEyebrow('Cashier');
   const navigate = useNavigate();
-  const { showToast } = useToast();
   const [tables, setTables] = useState([]);
   const [selectedTableId, setSelectedTableId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isLoading, setIsLoading] = useState(true);
-  const [isCheckouting, setIsCheckouting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  const getActiveOrderSnapshot = (table) => {
+    if (table?.activeOrderId && typeof table.activeOrderId === 'object') {
+      return table.activeOrderId;
+    }
+
+    if (table?.activeOrder) {
+      return {
+        _id: null,
+        customerName: table.activeOrder.customerName,
+        items: table.activeOrder.items,
+        subtotal: table.activeOrder.subtotal
+      };
+    }
+
+    return null;
+  };
 
   const loadTables = async () => {
     setIsLoading(true);
@@ -24,7 +37,8 @@ export function TableBillingPage() {
       setTables(response.tables);
       setErrorMessage('');
       if (!selectedTableId && response.tables[0]) {
-        setSelectedTableId(response.tables[0]._id);
+        const firstActiveTable = response.tables.find((table) => getActiveOrderSnapshot(table));
+        setSelectedTableId((firstActiveTable ?? response.tables[0])._id);
       }
     } catch (error) {
       setErrorMessage(error.message);
@@ -39,46 +53,9 @@ export function TableBillingPage() {
 
   const selectedTable =
     tables.find((table) => table._id === selectedTableId) ??
-    tables.find((table) => table.status === 'active') ??
+    tables.find((table) => getActiveOrderSnapshot(table)) ??
     tables[0];
-
-  const handleCheckout = async (status) => {
-    if (!selectedTable) {
-      return;
-    }
-
-    setIsCheckouting(true);
-    setErrorMessage('');
-
-    try {
-      await apiRequest(`/tables/${selectedTable._id}/checkout`, {
-        method: 'POST',
-        body: JSON.stringify({
-          status,
-          paymentMethod
-        })
-      });
-
-      await loadTables();
-      showToast({
-        title: status === 'paid' ? 'Payment completed' : 'Bill canceled',
-        message:
-          status === 'paid'
-            ? `Table ${selectedTable.number} has been checked out with ${paymentMethod}.`
-            : `Active bill for table ${selectedTable.number} has been canceled.`,
-        type: status === 'paid' ? 'success' : 'info'
-      });
-    } catch (error) {
-      setErrorMessage(error.message);
-      showToast({
-        title: 'Checkout failed',
-        message: error.message,
-        type: 'error'
-      });
-    } finally {
-      setIsCheckouting(false);
-    }
-  };
+  const selectedActiveOrder = getActiveOrderSnapshot(selectedTable);
 
   return (
     <section className="page">
@@ -87,9 +64,7 @@ export function TableBillingPage() {
           <p className="eyebrow">{eyebrow}</p>
           <h2>Table Billing</h2>
         </div>
-        <p className="muted">
-          Active tables will lead to either add-order flow or direct checkout.
-        </p>
+        <p className="muted">Only saved dine-in bills appear here. Load the table first, then continue all actions from POS.</p>
       </div>
 
       {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
@@ -111,32 +86,20 @@ export function TableBillingPage() {
             >
               <span className="table-icon" />
               <strong>Table {table.number}</strong>
-              <p>{table.activeOrder?.customerName ?? 'No active bill'}</p>
+              <p>{getActiveOrderSnapshot(table)?.customerName ?? 'No active bill'}</p>
             </button>
           ))}
         </div>
 
         <aside className="summary-card">
           <h3>{selectedTable ? `Table ${selectedTable.number}` : 'Select a table'}</h3>
-          {!selectedTable ? <p className="muted">Choose a table to open a bill or complete checkout.</p> : null}
-          {selectedTable?.status === 'available' ? (
+          {!selectedTable ? <p className="muted">Choose a table to inspect its current dine-in bill.</p> : null}
+          {!selectedActiveOrder && selectedTable ? <p className="muted">This table does not have any saved dine-in bill yet.</p> : null}
+          {selectedActiveOrder ? (
             <>
-              <p className="muted">This table is empty and ready for a new bill.</p>
-              <button
-                className="primary-button"
-                onClick={() => navigate(`/cashier/pos?tableId=${selectedTable._id}`)}
-                type="button"
-              >
-                Open New Bill
-              </button>
-            </>
-          ) : null}
-
-          {selectedTable?.status === 'active' ? (
-            <>
-              <p className="muted">Customer: {selectedTable.activeOrder.customerName}</p>
+              <p className="muted">Customer: {selectedActiveOrder.customerName}</p>
               <div className="simple-list">
-                {selectedTable.activeOrder.items.map((item) => (
+                {selectedActiveOrder.items.map((item) => (
                   <article key={item.product} className="list-row list-row-stack">
                     <div>
                       <strong>{item.name}</strong>
@@ -148,40 +111,20 @@ export function TableBillingPage() {
               </div>
               <div className="summary-total">
                 <span>Subtotal</span>
-                <strong>{formatCurrency(selectedTable.activeOrder.subtotal)}</strong>
-              </div>
-              <label className="field">
-                <span>Payment Method</span>
-                <select onChange={(event) => setPaymentMethod(event.target.value)} value={paymentMethod}>
-                  <option value="cash">Cash</option>
-                  <option value="qris">QRIS</option>
-                  <option value="transfer">Transfer</option>
-                </select>
-              </label>
-              <div className="button-row">
-                <button
-                  className="secondary-button"
-                  onClick={() => navigate(`/cashier/pos?tableId=${selectedTable._id}`)}
-                  type="button"
-                >
-                  Add Order
-                </button>
-                <button
-                  className="primary-button"
-                  disabled={isCheckouting}
-                  onClick={() => handleCheckout('paid')}
-                  type="button"
-                >
-                  {isCheckouting ? 'Processing...' : 'Pay'}
-                </button>
+                <strong>{formatCurrency(selectedActiveOrder.subtotal)}</strong>
               </div>
               <button
-                className="ghost-button"
-                disabled={isCheckouting}
-                onClick={() => handleCheckout('cancel')}
+                className="primary-button"
+                onClick={() =>
+                  navigate(
+                    selectedActiveOrder._id
+                      ? `/cashier/pos?activeOrderId=${selectedActiveOrder._id}`
+                      : `/cashier/pos?tableId=${selectedTable._id}`
+                  )
+                }
                 type="button"
               >
-                Cancel Bill
+                Load Order
               </button>
             </>
           ) : null}

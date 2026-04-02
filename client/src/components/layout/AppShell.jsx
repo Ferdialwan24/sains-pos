@@ -27,6 +27,9 @@ export function AppShell() {
   const { showToast } = useToast();
   const [hasLogoError, setHasLogoError] = useState(false);
   const navigation = navigationByRole[user?.role] ?? [];
+  const pageContentClassName = location.pathname.startsWith('/cashier/pos')
+    ? 'page-content page-content-pos'
+    : 'page-content';
 
   const handleLogout = () => {
     logout();
@@ -77,7 +80,7 @@ export function AppShell() {
           Logout
         </button>
       </aside>
-      <main className="page-content">
+      <main className={pageContentClassName}>
         <Outlet />
       </main>
     </div>

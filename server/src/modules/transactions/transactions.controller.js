@@ -1,11 +1,29 @@
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
 import {
+  checkoutActiveOrderTransaction,
+  checkoutDirectTransaction,
   getTransactionAnalytics,
   getTransactionDetail,
   getTransactionSummary,
   listTransactions
 } from './transactions.service.js';
+
+export const checkoutDirectTransactionController = asyncHandler(async (request, response) => {
+  const transaction = await checkoutDirectTransaction(request.body, request.user);
+
+  response.status(201).json({
+    transaction
+  });
+});
+
+export const checkoutActiveOrderTransactionController = asyncHandler(async (request, response) => {
+  const transaction = await checkoutActiveOrderTransaction(request.params.activeOrderId, request.body, request.user);
+
+  response.status(201).json({
+    transaction
+  });
+});
 
 export const listTransactionsController = asyncHandler(async (request, response) => {
   const transactions = await listTransactions(request.query);

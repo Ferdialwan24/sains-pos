@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { TABLE_STATUS, TABLE_STATUS_VALUES } from '../constants/tableStatus.js';
+import { ACTIVE_ORDER_STATUS, ACTIVE_ORDER_STATUS_VALUES } from '../constants/activeOrderStatus.js';
+import { ORDER_TYPE_VALUES } from '../constants/orderType.js';
 
 const activeOrderItemSchema = new mongoose.Schema(
   {
@@ -36,10 +37,30 @@ const activeOrderItemSchema = new mongoose.Schema(
 
 const activeOrderSchema = new mongoose.Schema(
   {
+    orderType: {
+      type: String,
+      enum: ORDER_TYPE_VALUES,
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ACTIVE_ORDER_STATUS_VALUES,
+      default: ACTIVE_ORDER_STATUS.ACTIVE
+    },
     customerName: {
       type: String,
       trim: true,
       required: true
+    },
+    table: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Table',
+      default: null
+    },
+    tableNumber: {
+      type: Number,
+      default: null,
+      min: 1
     },
     items: {
       type: [activeOrderItemSchema],
@@ -50,46 +71,10 @@ const activeOrderSchema = new mongoose.Schema(
       default: 0,
       min: 0
     },
-    openedBy: {
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
-    },
-    openedAt: {
-      type: Date,
-      default: Date.now
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now
-    }
-  },
-  {
-    _id: false
-  }
-);
-
-const tableSchema = new mongoose.Schema(
-  {
-    number: {
-      type: Number,
-      required: true,
-      unique: true,
-      min: 1
-    },
-    status: {
-      type: String,
-      enum: TABLE_STATUS_VALUES,
-      default: TABLE_STATUS.AVAILABLE
-    },
-    activeOrderId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'ActiveOrder',
-      default: null
-    },
-    activeOrder: {
-      type: activeOrderSchema,
-      default: null
     }
   },
   {
@@ -98,4 +83,7 @@ const tableSchema = new mongoose.Schema(
   }
 );
 
-export const Table = mongoose.model('Table', tableSchema);
+activeOrderSchema.index({ status: 1, orderType: 1, updatedAt: -1 });
+activeOrderSchema.index({ table: 1 }, { sparse: true });
+
+export const ActiveOrder = mongoose.model('ActiveOrder', activeOrderSchema);
