@@ -91,8 +91,6 @@ export function PosPage() {
 
   const selectedTable = tables.find((table) => table._id === selectedTableId) ?? null;
   const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
-  const activeTableCount = tables.filter((table) => table.status === 'active').length;
-
   const validateDraft = ({ requireTable = orderType === ORDER_TYPE.DINE_IN } = {}) => {
     if (!customerName.trim()) {
       throw new Error('Customer name is required');
@@ -133,6 +131,15 @@ export function PosPage() {
         }
       ];
     });
+  };
+
+  const handleAddProductToOrder = (product) => {
+    if (product.availability?.isAvailable === false) {
+      return;
+    }
+
+    const currentQuantity = orderItems.find((item) => item.productId === product._id)?.quantity ?? 0;
+    setProductQuantity(product, currentQuantity + 1);
   };
 
   const syncLoadedActiveOrder = async () => {
@@ -304,7 +311,6 @@ export function PosPage() {
             </div>
             <div className="pos-menu-heading-meta">
               <span className="panel-count">{products.length} products</span>
-              <span className="panel-count">{activeTableCount} active table(s)</span>
             </div>
           </div>
           {isLoading ? <div className="panel">Loading POS data...</div> : null}
@@ -314,45 +320,29 @@ export function PosPage() {
               const quantity = orderItems.find((item) => item.productId === product._id)?.quantity ?? 0;
 
               return (
-                <article
+                <button
                   key={product._id}
-                  className={`product-card pos-product-card${
+                  className={`product-card pos-product-card pos-product-button${
                     product.availability?.isAvailable === false ? ' product-card-disabled' : ''
                   }`}
+                  disabled={product.availability?.isAvailable === false}
+                  onClick={() => handleAddProductToOrder(product)}
+                  type="button"
                 >
                   <div className="pos-product-media">
+                    {quantity > 0 ? <strong className="pos-product-quantity-badge">x{quantity}</strong> : null}
                     {product.imageDataUrl ? <img alt={product.name} src={product.imageDataUrl} /> : <span>No image</span>}
                   </div>
                   <div className="pos-product-copy">
                     <h3>{product.name}</h3>
-                    <strong>{formatCurrency(product.price)}</strong>
-                    <p className="muted compact-text">
-                      {product.availability?.isAvailable === false
-                        ? product.availability.reason || 'Unavailable'
-                        : product.availability?.maxOrderQuantity !== null &&
-                            product.availability?.maxOrderQuantity !== undefined
-                          ? `Ready for ${product.availability.maxOrderQuantity} order(s)`
-                          : 'Always available'}
-                    </p>
+                    <div className="pos-product-meta-row">
+                      <span className="pos-product-stock">
+                        {product.trackInventory ? `${product.inventoryQuantity ?? 0} ${product.inventoryUnit ?? ''}`.trim() : ''}
+                      </span>
+                      <strong>{formatCurrency(product.price)}</strong>
+                    </div>
                   </div>
-                  <div className="quantity-control pos-quantity-control">
-                    <button
-                      disabled={product.availability?.isAvailable === false}
-                      onClick={() => setProductQuantity(product, quantity - 1)}
-                      type="button"
-                    >
-                      -
-                    </button>
-                    <span>{quantity}</span>
-                    <button
-                      disabled={product.availability?.isAvailable === false}
-                      onClick={() => setProductQuantity(product, quantity + 1)}
-                      type="button"
-                    >
-                      +
-                    </button>
-                  </div>
-                </article>
+                </button>
               );
             })}
           </div>
