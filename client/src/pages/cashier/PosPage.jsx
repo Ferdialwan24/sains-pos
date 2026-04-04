@@ -288,13 +288,13 @@ export function PosPage() {
     }
   };
 
-  return (
-    <section className="page pos-page">
-      <div className="page-header">
-        <div>
-          <p className="eyebrow">{eyebrow}</p>
-          <h2>Point of Sale</h2>
-        </div>
+    return (
+      <section className="page pos-page">
+        <div className="page-header">
+          <div>
+            <p className="eyebrow">{eyebrow}</p>
+            <h2>Point of Sale</h2>
+          </div>
         <p className="muted">
           Start every new order here. Dine-in can be saved as an open bill, while takeaway goes straight to payment.
         </p>
@@ -302,37 +302,35 @@ export function PosPage() {
 
       {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
 
-      <div className="content-grid">
-        <div className="panel pos-menu-panel">
-          <div className="panel-heading pos-menu-heading">
-            <div>
-              <p className="eyebrow">Menu</p>
-              <h3>Product Menu</h3>
+        <div className="content-grid">
+          <div className="panel pos-menu-panel">
+            <div className="panel-heading pos-menu-heading">
+              <div>
+                <div className="user-list-heading">
+                  <h3>Product</h3>
+                </div>
+              </div>
             </div>
-            <div className="pos-menu-heading-meta">
-              <span className="panel-count">{products.length} products</span>
-            </div>
-          </div>
-          {isLoading ? <div className="panel">Loading POS data...</div> : null}
-          {!isLoading && products.length === 0 ? <div className="panel">No products available yet.</div> : null}
-          <div className="card-list pos-card-list">
-            {products.map((product) => {
-              const quantity = orderItems.find((item) => item.productId === product._id)?.quantity ?? 0;
+            {isLoading ? <div className="panel">Loading POS data...</div> : null}
+            {!isLoading && products.length === 0 ? <div className="panel">No products available yet.</div> : null}
+            <div className="card-list pos-card-list">
+              {products.map((product) => {
+                const quantity = orderItems.find((item) => item.productId === product._id)?.quantity ?? 0;
 
-              return (
-                <button
-                  key={product._id}
+                return (
+                  <button
+                    key={product._id}
                   className={`product-card pos-product-card pos-product-button${
                     product.availability?.isAvailable === false ? ' product-card-disabled' : ''
                   }`}
                   disabled={product.availability?.isAvailable === false}
-                  onClick={() => handleAddProductToOrder(product)}
-                  type="button"
-                >
-                  <div className="pos-product-media">
-                    {quantity > 0 ? <strong className="pos-product-quantity-badge">x{quantity}</strong> : null}
-                    {product.imageDataUrl ? <img alt={product.name} src={product.imageDataUrl} /> : <span>No image</span>}
-                  </div>
+                    onClick={() => handleAddProductToOrder(product)}
+                    type="button"
+                  >
+                    <div className="pos-product-media">
+                      {quantity > 0 ? <strong className="pos-product-quantity-badge">x{quantity}</strong> : null}
+                      {product.imageDataUrl ? <img alt={product.name} src={product.imageDataUrl} /> : <span>No image</span>}
+                    </div>
                   <div className="pos-product-copy">
                     <h3>{product.name}</h3>
                     <div className="pos-product-meta-row">
@@ -348,19 +346,20 @@ export function PosPage() {
           </div>
         </div>
 
-        <aside className="summary-card pos-summary-card">
-          <div className="pos-order-header">
-            <div>
-              <p className="eyebrow">Order</p>
-              <h3>
-                {loadedActiveOrderId
-                  ? `Loaded Bill${selectedTable ? ` - Table ${selectedTable.number}` : ''}`
-                  : orderType === ORDER_TYPE.DINE_IN
-                    ? 'Dine In Order'
-                    : 'Takeaway Order'}
-              </h3>
-            </div>
-            <div className="pos-mode-switch">
+          <aside className="summary-card pos-summary-card">
+            <div className="pos-order-header">
+              <div>
+                <div className="user-list-heading">
+                  <h3>
+                    {loadedActiveOrderId
+                      ? `Loaded Bill${selectedTable ? ` - Table ${selectedTable.number}` : ''}`
+                      : orderType === ORDER_TYPE.DINE_IN
+                        ? 'Dine In Order'
+                        : 'Takeaway Order'}
+                  </h3>
+                </div>
+              </div>
+              <div className="pos-mode-switch">
               <button
                 className={`pos-mode-button${orderType === ORDER_TYPE.DINE_IN ? ' pos-mode-button-active' : ''}`}
                 disabled={Boolean(loadedActiveOrderId)}

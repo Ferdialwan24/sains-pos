@@ -141,6 +141,16 @@ a {
   gap: 16px;
 }
 
+.pos-page > .page-header,
+.table-billing-page > .page-header {
+  align-items: flex-start;
+}
+
+.pos-page > .page-header .muted,
+.table-billing-page > .page-header .muted {
+  margin: 0;
+}
+
 .header-actions {
   display: grid;
   justify-items: end;
@@ -757,29 +767,31 @@ a {
 }
 
 .pos-card-list {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, 1fr);
-  justify-content: stretch;
+  grid-template-columns: repeat(5, 168px);
+  grid-auto-rows: 214px;
+  justify-content: space-evenly;
+  justify-items: center;
   align-content: start;
   overflow: auto;
   min-height: 0;
-  column-gap: 18px;
-  row-gap: 16px;
-  padding-right: 4px;
+  column-gap: 12px;
+  row-gap: 29px;
+  padding-top: 8px;
 }
 
 .pos-product-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 100%;
+  width: 168px;
   max-width: 168px;
-  justify-self: stretch;
-  min-height: 228px;
-  max-height: 228px;
+  justify-self: center;
+  min-height: 214px;
+  max-height: 214px;
   padding: 10px;
   text-align: left;
   overflow: hidden;
+  box-shadow: none;
 }
 
 .pos-product-button {
@@ -807,8 +819,8 @@ a {
 
 .pos-product-media {
   width: 100%;
-  height: 116px;
-  flex: 0 0 116px;
+  height: 108px;
+  flex: 0 0 108px;
   position: relative;
   overflow: hidden;
   border-radius: 14px;
@@ -829,7 +841,7 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 8px;
+  gap: 2px;
   min-width: 0;
   flex: 1 1 auto;
 }
@@ -889,6 +901,7 @@ a {
   background: #dbeafe;
   color: #0369a1;
   font-size: 0.72rem;
+  font-weight: 700;
   position: absolute;
   top: 7px;
   right: 7px;
@@ -1024,17 +1037,19 @@ a {
 }
 
 .pos-order-list {
-  padding: 4px 4px 0 0;
+  padding: 2px 4px 0 0;
   min-height: 0;
   height: 100%;
   max-height: none;
   overflow: auto;
+  align-content: start;
+  gap: 3px;
 }
 
 .pos-order-item {
-  gap: 12px;
+  gap: 8px;
   background: rgba(248, 250, 252, 0.98);
-  padding: 14px 16px;
+  padding: 7px 9px;
 }
 
 .pos-order-line-total {

@@ -57,13 +57,13 @@ export function TableBillingPage() {
     tables[0];
   const selectedActiveOrder = getActiveOrderSnapshot(selectedTable);
 
-  return (
-    <section className="page">
-      <div className="page-header">
-        <div>
-          <p className="eyebrow">{eyebrow}</p>
-          <h2>Table Billing</h2>
-        </div>
+    return (
+      <section className="page table-billing-page">
+        <div className="page-header">
+          <div>
+            <p className="eyebrow">{eyebrow}</p>
+            <h2>Table Billing</h2>
+          </div>
         <p className="muted">Only saved dine-in bills appear here. Load the table first, then continue all actions from POS.</p>
       </div>
 
