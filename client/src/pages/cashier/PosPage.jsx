@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FormModal } from '../../components/common/FormModal.jsx';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency } from '../../lib/format.js';
@@ -8,6 +9,12 @@ import { useToast } from '../../hooks/useToast.js';
 const ORDER_TYPE = {
   DINE_IN: 'dine_in',
   TAKEAWAY: 'takeaway'
+};
+
+const PAYMENT_METHOD = {
+  CASH: 'cash',
+  QR: 'qr',
+  CARD: 'card'
 };
 
 const normalizeOrderItem = (item) => ({
@@ -20,6 +27,9 @@ const normalizeOrderItem = (item) => ({
 
 const getTableFieldLabel = (orderType, table) =>
   orderType === ORDER_TYPE.TAKEAWAY ? 'Takeaway' : table ? `Table ${table.number}` : 'Select a table';
+
+const getTableSummaryLabel = (orderType, table) =>
+  orderType === ORDER_TYPE.TAKEAWAY ? 'Takeaway' : table ? `Table ${table.number}` : '-';
 
 export function PosPage() {
   const eyebrow = useRoleEyebrow('Cashier');
@@ -40,6 +50,11 @@ export function PosPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(PAYMENT_METHOD.CASH);
+  const [cashReceived, setCashReceived] = useState('');
+  const [paymentErrorMessage, setPaymentErrorMessage] = useState('');
+  const [successPayment, setSuccessPayment] = useState(null);
 
   const resetDraft = () => {
     setOrderType(ORDER_TYPE.DINE_IN);
@@ -94,6 +109,12 @@ export function PosPage() {
 
   const selectedTable = tables.find((table) => table._id === selectedTableId) ?? null;
   const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
+  const parsedCashReceived = Number(cashReceived);
+  const cashChange =
+    selectedPaymentMethod === PAYMENT_METHOD.CASH && Number.isFinite(parsedCashReceived)
+      ? Math.max(0, parsedCashReceived - subtotal)
+      : 0;
+
   const validateDraft = ({ requireTable = orderType === ORDER_TYPE.DINE_IN } = {}) => {
     if (!customerName.trim()) {
       throw new Error('Customer name is required');
@@ -166,6 +187,13 @@ export function PosPage() {
     });
   };
 
+  const resetPaymentFlow = () => {
+    setSelectedPaymentMethod(PAYMENT_METHOD.CASH);
+    setCashReceived('');
+    setPaymentErrorMessage('');
+    setIsPaymentModalOpen(false);
+  };
+
   const handleSaveBill = async () => {
     try {
       validateDraft({ requireTable: true });
@@ -208,11 +236,40 @@ export function PosPage() {
     }
   };
 
+  const openPaymentModal = () => {
+    try {
+      validateDraft();
+      setPaymentErrorMessage('');
+      setSelectedPaymentMethod(PAYMENT_METHOD.CASH);
+      setCashReceived('');
+      setIsPaymentModalOpen(true);
+    } catch (error) {
+      setErrorMessage(error.message);
+      showToast({
+        title: 'Payment failed',
+        message: error.message,
+        type: 'error'
+      });
+    }
+  };
+
   const handlePay = async () => {
     try {
       validateDraft();
+
+      if (selectedPaymentMethod === PAYMENT_METHOD.CASH) {
+        if (!cashReceived.trim()) {
+          throw new Error('Cash amount is required');
+        }
+
+        if (!Number.isFinite(parsedCashReceived) || parsedCashReceived < subtotal) {
+          throw new Error('Cash amount must be equal to or greater than the transaction total');
+        }
+      }
+
       setIsPaying(true);
       setErrorMessage('');
+      setPaymentErrorMessage('');
 
       let response;
 
@@ -222,7 +279,7 @@ export function PosPage() {
           method: 'POST',
           body: JSON.stringify({
             status: 'paid',
-            paymentMethod: 'cash'
+            paymentMethod: selectedPaymentMethod
           })
         });
       } else {
@@ -237,24 +294,33 @@ export function PosPage() {
               quantity: item.quantity
             })),
             status: 'paid',
-            paymentMethod: 'cash'
+            paymentMethod: selectedPaymentMethod
           })
         });
       }
 
-      showToast({
-        title: 'Payment completed',
-        message: `Invoice ${response.transaction.invoiceNo} was completed successfully.`,
-        type: 'success'
-      });
-      navigate('/cashier/pos');
+      const nextSuccessPayment = {
+        customerName: response.transaction.customerName,
+        invoiceNo: response.transaction.invoiceNo,
+        paymentMethod: selectedPaymentMethod,
+        tableLabel: getTableSummaryLabel(orderType, selectedTable),
+        totalAmount: response.transaction.totalAmount,
+        cashReceived:
+          selectedPaymentMethod === PAYMENT_METHOD.CASH && Number.isFinite(parsedCashReceived)
+            ? parsedCashReceived
+            : null,
+        changeAmount:
+          selectedPaymentMethod === PAYMENT_METHOD.CASH && Number.isFinite(parsedCashReceived)
+            ? Math.max(0, parsedCashReceived - response.transaction.totalAmount)
+            : 0
+      };
+
+      resetDraft();
+      resetPaymentFlow();
+      setSuccessPayment(nextSuccessPayment);
+      navigate('/cashier/pos', { replace: true });
     } catch (error) {
-      setErrorMessage(error.message);
-      showToast({
-        title: 'Payment failed',
-        message: error.message,
-        type: 'error'
-      });
+      setPaymentErrorMessage(error.message);
     } finally {
       setIsPaying(false);
     }
@@ -487,7 +553,12 @@ export function PosPage() {
             <strong>{formatCurrency(subtotal)}</strong>
           </div>
 
-          <button className="primary-button pos-pay-button" disabled={isPaying || isLoading} onClick={handlePay} type="button">
+          <button
+            className="primary-button pos-pay-button"
+            disabled={isPaying || isLoading}
+            onClick={openPaymentModal}
+            type="button"
+          >
             {isPaying ? 'Processing...' : 'Pay'}
           </button>
 
@@ -498,6 +569,160 @@ export function PosPage() {
           ) : null}
         </aside>
       </div>
+
+      <FormModal
+        footer={
+          <>
+            <button className="secondary-button" onClick={resetPaymentFlow} type="button">
+              Cancel
+            </button>
+            <button className="primary-button" disabled={isPaying} onClick={handlePay} type="button">
+              {isPaying ? 'Processing...' : 'Pay'}
+            </button>
+          </>
+        }
+        isOpen={isPaymentModalOpen}
+        onClose={resetPaymentFlow}
+        title="Payment"
+      >
+        <div className="payment-modal-body">
+          <div className="payment-summary-card">
+            <div className="payment-summary-row">
+              <span>Customer</span>
+              <strong>{customerName || '-'}</strong>
+            </div>
+            <div className="payment-summary-row">
+              <span>Table</span>
+              <strong>{getTableSummaryLabel(orderType, selectedTable)}</strong>
+            </div>
+            <div className="payment-summary-row">
+              <span>Total</span>
+              <strong>{formatCurrency(subtotal)}</strong>
+            </div>
+          </div>
+
+          <div className="payment-method-group">
+            <p className="payment-group-title">Payment Method</p>
+            <div className="payment-method-switch">
+              <button
+                className={`payment-method-button${
+                  selectedPaymentMethod === PAYMENT_METHOD.CASH ? ' payment-method-button-active' : ''
+                }`}
+                onClick={() => {
+                  setSelectedPaymentMethod(PAYMENT_METHOD.CASH);
+                  setPaymentErrorMessage('');
+                }}
+                type="button"
+              >
+                Cash
+              </button>
+              <button
+                className={`payment-method-button${
+                  selectedPaymentMethod === PAYMENT_METHOD.QR ? ' payment-method-button-active' : ''
+                }`}
+                onClick={() => {
+                  setSelectedPaymentMethod(PAYMENT_METHOD.QR);
+                  setPaymentErrorMessage('');
+                }}
+                type="button"
+              >
+                QR
+              </button>
+              <button
+                className={`payment-method-button${
+                  selectedPaymentMethod === PAYMENT_METHOD.CARD ? ' payment-method-button-active' : ''
+                }`}
+                onClick={() => {
+                  setSelectedPaymentMethod(PAYMENT_METHOD.CARD);
+                  setPaymentErrorMessage('');
+                }}
+                type="button"
+              >
+                Card
+              </button>
+            </div>
+          </div>
+
+          {selectedPaymentMethod === PAYMENT_METHOD.CASH ? (
+            <div className="payment-cash-group">
+              <label className="field">
+                <span>Cash Received</span>
+                <input
+                  inputMode="decimal"
+                  onChange={(event) => setCashReceived(event.target.value)}
+                  placeholder="Enter cash amount"
+                  value={cashReceived}
+                />
+              </label>
+              <div className="button-row">
+                <button
+                  className="secondary-button"
+                  onClick={() => setCashReceived(subtotal ? String(subtotal) : '')}
+                  type="button"
+                >
+                  Exact Cash
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {paymentErrorMessage ? <p className="form-error">{paymentErrorMessage}</p> : null}
+        </div>
+      </FormModal>
+
+      <FormModal
+        footer={
+          <button
+            className="primary-button"
+            onClick={() => setSuccessPayment(null)}
+            type="button"
+          >
+            Close
+          </button>
+        }
+        isOpen={Boolean(successPayment)}
+        onClose={() => setSuccessPayment(null)}
+        title="Transaction Successful"
+      >
+        {successPayment ? (
+          <div className="payment-success-body">
+            <div className="payment-success-card">
+              <div className="payment-summary-row">
+                <span>Customer</span>
+                <strong>{successPayment.customerName}</strong>
+              </div>
+              <div className="payment-summary-row">
+                <span>Table</span>
+                <strong>{successPayment.tableLabel}</strong>
+              </div>
+              <div className="payment-summary-row">
+                <span>Invoice</span>
+                <strong>{successPayment.invoiceNo}</strong>
+              </div>
+              <div className="payment-summary-row">
+                <span>Method</span>
+                <strong className="capitalize-text">{successPayment.paymentMethod}</strong>
+              </div>
+              <div className="payment-summary-row">
+                <span>Total</span>
+                <strong>{formatCurrency(successPayment.totalAmount)}</strong>
+              </div>
+              {successPayment.paymentMethod === PAYMENT_METHOD.CASH && successPayment.cashReceived !== null ? (
+                <div className="payment-summary-row">
+                  <span>Cash Received</span>
+                  <strong>{formatCurrency(successPayment.cashReceived)}</strong>
+                </div>
+              ) : null}
+              {successPayment.paymentMethod === PAYMENT_METHOD.CASH && successPayment.changeAmount > 0 ? (
+                <div className="payment-summary-row payment-change-row">
+                  <span>Change</span>
+                  <strong>{formatCurrency(successPayment.changeAmount)}</strong>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </FormModal>
     </section>
   );
 }

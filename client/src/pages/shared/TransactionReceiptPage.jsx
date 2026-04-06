@@ -8,6 +8,9 @@ import { formatCurrency, formatDateTime } from '../../lib/format.js';
 const getReceiptTableLabel = (transaction) =>
   transaction.orderType === 'takeaway' ? 'Takeaway' : transaction.tableNumber ?? '-';
 
+const getReceiptPaymentLabel = (transaction) =>
+  transaction.status === 'cancel' ? '-' : transaction.paymentMethod ?? '-';
+
 export function TransactionReceiptPage() {
   const eyebrow = useRoleEyebrow('Receipt');
   const { transactionId } = useParams();
@@ -84,7 +87,9 @@ export function TransactionReceiptPage() {
               </article>
               <article className="list-row">
                 <span>Payment</span>
-                <strong className="capitalize-text">{transaction.paymentMethod}</strong>
+                <strong className={getReceiptPaymentLabel(transaction) === '-' ? '' : 'capitalize-text'}>
+                  {getReceiptPaymentLabel(transaction)}
+                </strong>
               </article>
             </div>
 

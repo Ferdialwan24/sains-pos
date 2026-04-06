@@ -38,6 +38,10 @@ a {
 }
 
 .sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
   padding: 24px;
   background: #101828;
   color: #f8fafc;
@@ -1075,6 +1079,76 @@ a {
   padding: 14px 18px;
   font-size: 1.02rem;
   box-shadow: 0 16px 32px rgba(14, 165, 233, 0.24);
+}
+
+.payment-modal-body,
+.payment-success-body {
+  display: grid;
+  gap: 18px;
+}
+
+.payment-summary-card,
+.payment-success-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.payment-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.payment-summary-row span {
+  color: #526071;
+}
+
+.payment-summary-row strong {
+  color: #0f172a;
+  text-align: right;
+}
+
+.payment-group-title {
+  margin: 0 0 10px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.payment-method-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.payment-method-button {
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 11px 14px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payment-method-button-active {
+  border-color: #38bdf8;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.payment-cash-group {
+  display: grid;
+  gap: 12px;
+}
+
+.payment-change-row strong {
+  color: #166534;
 }
 
 .product-card-disabled {

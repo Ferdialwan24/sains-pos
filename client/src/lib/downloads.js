@@ -20,6 +20,9 @@ const sanitizePdfText = (value) =>
 const getReceiptTableLabel = (transaction) =>
   transaction.orderType === 'takeaway' ? 'Takeaway' : transaction.tableNumber ?? '-';
 
+const getReceiptPaymentLabel = (transaction) =>
+  transaction.status === 'cancel' ? '-' : transaction.paymentMethod ?? '-';
+
 export const downloadReceiptPdf = (transaction) => {
   const lines = [
     'Sains POS',
@@ -29,7 +32,7 @@ export const downloadReceiptPdf = (transaction) => {
     `Customer: ${transaction.customerName}`,
     `Table: ${getReceiptTableLabel(transaction)}`,
     `Cashier: ${transaction.cashier?.fullName ?? '-'}`,
-    `Payment: ${transaction.paymentMethod}`,
+    `Payment: ${getReceiptPaymentLabel(transaction)}`,
     '------------------------------',
     ...transaction.items.flatMap((item) => [
       `${item.name}`,

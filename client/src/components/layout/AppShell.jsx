@@ -8,14 +8,14 @@ const navigationByRole = {
     { label: 'Dashboard', path: '/admin/dashboard' },
     { label: 'Sales Reports', path: '/admin/reports' },
     { label: 'Users', path: '/admin/users' },
-    { label: 'Tables', path: '/admin/tables' },
+    { label: 'Tables Management', path: '/admin/tables' },
     { label: 'Products', path: '/admin/products' },
     { label: 'Inventory', path: '/admin/inventory' },
-    { label: 'Cashier Tables', path: '/cashier/tables' },
+    { label: 'Tables', path: '/cashier/tables' },
     { label: 'Transactions', path: '/cashier/transactions' }
   ],
   cashier: [
-    { label: 'Table Billing', path: '/cashier/tables' },
+    { label: 'Tables', path: '/cashier/tables' },
     { label: 'Point of Sale', path: '/cashier/pos' },
     { label: 'Transactions', path: '/cashier/transactions' }
   ]

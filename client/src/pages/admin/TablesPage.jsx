@@ -145,7 +145,7 @@ export function TablesPage() {
       <div className="page-header">
         <div>
           <p className="eyebrow">{eyebrow}</p>
-          <h2>Manage Tables</h2>
+          <h2>Tables Management</h2>
         </div>
         <p className="muted">Set up the physical tables before cashiers start opening bills.</p>
       </div>

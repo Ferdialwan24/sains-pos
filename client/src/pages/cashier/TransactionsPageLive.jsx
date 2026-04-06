@@ -22,6 +22,9 @@ const statusFilterOptions = [
 const getReceiptTableLabel = (transaction) =>
   transaction.orderType === 'takeaway' ? 'Takeaway' : transaction.tableNumber ?? '-';
 
+const getReceiptPaymentLabel = (transaction) =>
+  transaction.status === 'cancel' ? '-' : transaction.paymentMethod ?? '-';
+
 const ReceiptContent = ({ transaction, receiptRef = null }) => {
   if (!transaction) {
     return null;
@@ -97,7 +100,9 @@ const ReceiptContent = ({ transaction, receiptRef = null }) => {
         <div className="receipt-total-row receipt-payment-row">
           <span>PAYMENT METHOD</span>
           <span>:</span>
-          <strong className="capitalize-text">{transaction.paymentMethod}</strong>
+          <strong className={getReceiptPaymentLabel(transaction) === '-' ? '' : 'capitalize-text'}>
+            {getReceiptPaymentLabel(transaction)}
+          </strong>
         </div>
       </div>
     </div>
