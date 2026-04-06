@@ -17,6 +17,9 @@ const sanitizePdfText = (value) =>
     .replace(/\(/g, '\\(')
     .replace(/\)/g, '\\)');
 
+const getReceiptTableLabel = (transaction) =>
+  transaction.orderType === 'takeaway' ? 'Takeaway' : transaction.tableNumber ?? '-';
+
 export const downloadReceiptPdf = (transaction) => {
   const lines = [
     'Sains POS',
@@ -24,7 +27,7 @@ export const downloadReceiptPdf = (transaction) => {
     `Date: ${new Date(transaction.createdAt).toLocaleString('en-MY')}`,
     `Status: ${transaction.status}`,
     `Customer: ${transaction.customerName}`,
-    `Table: ${transaction.tableNumber}`,
+    `Table: ${getReceiptTableLabel(transaction)}`,
     `Cashier: ${transaction.cashier?.fullName ?? '-'}`,
     `Payment: ${transaction.paymentMethod}`,
     '------------------------------',

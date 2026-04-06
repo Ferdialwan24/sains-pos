@@ -17,7 +17,7 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isAuthenticated) {
-    return <Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/cashier/tables'} replace />;
+    return <Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/cashier/pos'} replace />;
   }
 
   const handleChange = (event) => {
@@ -34,7 +34,7 @@ export function LoginPage() {
 
     try {
       const loggedInUser = await login(form);
-      const fallbackPath = loggedInUser.role === 'admin' ? '/admin/dashboard' : '/cashier/tables';
+      const fallbackPath = loggedInUser.role === 'admin' ? '/admin/dashboard' : '/cashier/pos';
       const nextPath = location.state?.from?.pathname ?? fallbackPath;
       showToast({
         title: 'Login successful',

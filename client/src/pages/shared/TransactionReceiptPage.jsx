@@ -5,6 +5,9 @@ import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency, formatDateTime } from '../../lib/format.js';
 
+const getReceiptTableLabel = (transaction) =>
+  transaction.orderType === 'takeaway' ? 'Takeaway' : transaction.tableNumber ?? '-';
+
 export function TransactionReceiptPage() {
   const eyebrow = useRoleEyebrow('Receipt');
   const { transactionId } = useParams();
@@ -73,7 +76,7 @@ export function TransactionReceiptPage() {
               </article>
               <article className="list-row">
                 <span>Table</span>
-                <strong>{transaction.tableNumber}</strong>
+                <strong>{getReceiptTableLabel(transaction)}</strong>
               </article>
               <article className="list-row">
                 <span>Cashier</span>

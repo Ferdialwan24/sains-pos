@@ -19,6 +19,9 @@ const statusFilterOptions = [
   { label: 'Cancel', value: 'cancel' }
 ];
 
+const getReceiptTableLabel = (transaction) =>
+  transaction.orderType === 'takeaway' ? 'Takeaway' : transaction.tableNumber ?? '-';
+
 const ReceiptContent = ({ transaction, receiptRef = null }) => {
   if (!transaction) {
     return null;
@@ -43,7 +46,7 @@ const ReceiptContent = ({ transaction, receiptRef = null }) => {
             <div className="receipt-detail-line">
               <span>Table</span>
               <span>:</span>
-              <span>{transaction.tableNumber}</span>
+              <span>{getReceiptTableLabel(transaction)}</span>
             </div>
             <div className="receipt-detail-line">
               <span>Served By</span>

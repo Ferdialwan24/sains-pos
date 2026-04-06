@@ -18,6 +18,9 @@ const normalizeOrderItem = (item) => ({
   lineTotal: item.price * Number(item.quantity)
 });
 
+const getTableFieldLabel = (orderType, table) =>
+  orderType === ORDER_TYPE.TAKEAWAY ? 'Takeaway' : table ? `Table ${table.number}` : 'Select a table';
+
 export function PosPage() {
   const eyebrow = useRoleEyebrow('Cashier');
   const navigate = useNavigate();
@@ -114,22 +117,25 @@ export function PosPage() {
     const safeQuantity = Math.max(0, boundedQuantity);
 
     setOrderItems((currentItems) => {
-      const nextItems = currentItems.filter((item) => item.productId !== product._id);
+      const existingIndex = currentItems.findIndex((item) => item.productId === product._id);
 
       if (safeQuantity === 0) {
-        return nextItems;
+        return currentItems.filter((item) => item.productId !== product._id);
       }
 
-      return [
-        ...nextItems,
-        {
-          productId: product._id,
-          name: product.name,
-          price: product.price,
-          quantity: safeQuantity,
-          lineTotal: product.price * safeQuantity
-        }
-      ];
+      const nextItem = {
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        quantity: safeQuantity,
+        lineTotal: product.price * safeQuantity
+      };
+
+      if (existingIndex === -1) {
+        return [...currentItems, nextItem];
+      }
+
+      return currentItems.map((item, index) => (index === existingIndex ? nextItem : item));
     });
   };
 
@@ -188,7 +194,8 @@ export function PosPage() {
         message: `Open bill for ${customerName} is now attached to table ${selectedTable?.number}.`,
         type: 'success'
       });
-      navigate('/cashier/tables');
+      resetDraft();
+      navigate('/cashier/pos', { replace: true });
     } catch (error) {
       setErrorMessage(error.message);
       showToast({
@@ -392,23 +399,27 @@ export function PosPage() {
                 <input onChange={(event) => setCustomerName(event.target.value)} value={customerName} />
               </label>
 
-              {orderType === ORDER_TYPE.DINE_IN ? (
-                <label className="field pos-inline-field">
-                  <span>Table</span>
-                  <select onChange={(event) => setSelectedTableId(event.target.value)} value={selectedTableId}>
-                    <option value="">Select a table</option>
-                    {selectableTables.map((table) => (
-                      <option key={table._id} value={table._id}>
-                        Table {table.number}
-                        {table.status === 'active' ? ' (Active)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
+              <label className="field pos-inline-field">
+                <span>Table</span>
+                <select
+                  disabled={orderType === ORDER_TYPE.TAKEAWAY}
+                  onChange={(event) => setSelectedTableId(event.target.value)}
+                  value={orderType === ORDER_TYPE.TAKEAWAY ? '' : selectedTableId}
+                >
+                  <option value="">{getTableFieldLabel(orderType, selectedTable)}</option>
+                  {orderType === ORDER_TYPE.DINE_IN
+                    ? selectableTables.map((table) => (
+                        <option key={table._id} value={table._id}>
+                          Table {table.number}
+                          {table.status === 'active' ? ' (Active)' : ''}
+                        </option>
+                      ))
+                    : null}
+                </select>
+              </label>
             </div>
 
-            <div className={`pos-items-card${orderType === ORDER_TYPE.TAKEAWAY ? ' pos-items-card-expanded' : ''}`}>
+            <div className="pos-items-card">
               <div className="pos-summary-head">
                 <p className="muted">{loadedActiveOrderId ? 'Loaded order items' : 'Current order items'}</p>
                 <strong>{orderItems.length} item(s)</strong>
@@ -458,26 +469,22 @@ export function PosPage() {
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="summary-total">
-            <span>Subtotal</span>
-            <strong>{formatCurrency(subtotal)}</strong>
-          </div>
-
-          <div className="button-row pos-secondary-actions">
-            {orderType === ORDER_TYPE.DINE_IN ? (
+            <div className="button-row pos-secondary-actions">
               <button
                 className="secondary-button"
-                disabled={isSavingBill || isLoading}
+                disabled={orderType === ORDER_TYPE.TAKEAWAY || isSavingBill || isLoading}
                 onClick={handleSaveBill}
                 type="button"
               >
                 {isSavingBill ? 'Saving...' : 'Save Bill'}
               </button>
-            ) : (
-              <span aria-hidden="true" className="pos-action-placeholder" />
-            )}
+            </div>
+          </div>
+
+          <div className="summary-total">
+            <span>Subtotal</span>
+            <strong>{formatCurrency(subtotal)}</strong>
           </div>
 
           <button className="primary-button pos-pay-button" disabled={isPaying || isLoading} onClick={handlePay} type="button">

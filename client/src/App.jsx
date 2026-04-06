@@ -12,7 +12,6 @@ import { UsersPage } from './pages/admin/UsersPage.jsx';
 import { PosPage } from './pages/cashier/PosPage.jsx';
 import { TableBillingPage } from './pages/cashier/TableBillingPage.jsx';
 import { TransactionsPageLive } from './pages/cashier/TransactionsPageLive.jsx';
-import { TransactionReceiptPage } from './pages/shared/TransactionReceiptPage.jsx';
 
 function HomeRedirect() {
   const { isAuthenticated, isBootstrapping, user } = useAuth();
@@ -25,7 +24,7 @@ function HomeRedirect() {
     return <Navigate to="/login" replace />;
   }
 
-  return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/cashier/tables'} replace />;
+  return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/cashier/pos'} replace />;
 }
 
 export default function App() {
@@ -38,9 +37,7 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={['cashier', 'admin']} />}>
             <Route path="/cashier/pos" element={<PosPage />} />
             <Route path="/cashier/tables" element={<TableBillingPage />} />
-            
             <Route path="/cashier/transactions" element={<TransactionsPageLive />} />
-            <Route path="/transactions/:transactionId" element={<TransactionReceiptPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>

@@ -2,41 +2,9 @@ import { ACTIVE_ORDER_STATUS } from '../../constants/activeOrderStatus.js';
 import { ORDER_TYPE } from '../../constants/orderType.js';
 import { TABLE_STATUS } from '../../constants/tableStatus.js';
 import { ActiveOrder } from '../../models/ActiveOrder.js';
-import { Product } from '../../models/Product.js';
 import { Table } from '../../models/Table.js';
 import { ApiError } from '../../utils/ApiError.js';
-
-const calculateSubtotal = (items) => items.reduce((sum, item) => sum + item.lineTotal, 0);
-
-const buildOrderItems = async (items) => {
-  if (!Array.isArray(items) || items.length === 0) {
-    throw new ApiError(400, 'At least one product item is required');
-  }
-
-  const productIds = items.map((item) => item.productId);
-  const products = await Product.find({ _id: { $in: productIds }, isActive: true });
-  const productMap = new Map(products.map((product) => [product.id, product]));
-
-  return items.map((item) => {
-    const product = productMap.get(item.productId);
-
-    if (!product) {
-      throw new ApiError(404, `Product not found: ${item.productId}`);
-    }
-
-    if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
-      throw new ApiError(400, 'Product quantity must be greater than zero');
-    }
-
-    return {
-      product: product.id,
-      name: product.name,
-      price: product.price,
-      quantity: item.quantity,
-      lineTotal: product.price * item.quantity
-    };
-  });
-};
+import { buildOrderItems, calculateSubtotal } from '../../utils/orderItems.js';
 
 const ensureActiveOrder = async (activeOrderId) => {
   const activeOrder = await ActiveOrder.findById(activeOrderId)
@@ -71,14 +39,6 @@ const ensureAvailableTable = async (tableId, ignoredActiveOrderId = null) => {
 const syncTableWithActiveOrder = async (table, activeOrder) => {
   table.status = TABLE_STATUS.ACTIVE;
   table.activeOrderId = activeOrder._id;
-  table.activeOrder = {
-    customerName: activeOrder.customerName,
-    items: activeOrder.items,
-    subtotal: activeOrder.subtotal,
-    openedBy: activeOrder.createdBy,
-    openedAt: activeOrder.createdAt,
-    updatedAt: activeOrder.updatedAt
-  };
 
   await table.save();
 };
@@ -96,7 +56,6 @@ const clearTableActiveOrder = async (tableId) => {
 
   table.status = TABLE_STATUS.AVAILABLE;
   table.activeOrderId = null;
-  table.activeOrder = null;
   await table.save();
 };
 

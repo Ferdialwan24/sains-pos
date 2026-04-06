@@ -14,10 +14,9 @@ export function ProtectedRoute({ allowedRoles = [] }) {
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    const fallbackPath = user.role === 'admin' ? '/admin/dashboard' : '/cashier/tables';
+    const fallbackPath = user.role === 'admin' ? '/admin/dashboard' : '/cashier/pos';
     return <Navigate to={fallbackPath} replace />;
   }
 
   return <Outlet />;
 }
-
