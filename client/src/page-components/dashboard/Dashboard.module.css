@@ -1,0 +1,193 @@
+.filterStack {
+  display: grid;
+  gap: 16px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.summaryCard {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+  padding: 22px 24px;
+  border-radius: 22px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 44px rgba(16, 24, 40, 0.08);
+}
+
+.summaryIcon {
+  width: 70px;
+  height: 70px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+}
+
+.summaryIcon svg {
+  width: 36px;
+  height: 36px;
+}
+
+.summaryIconBlue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.summaryIconGreen {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.summaryIconAmber {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.summaryIconRed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.summaryCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.summaryCopy p {
+  margin: 0;
+  color: #526071;
+}
+
+.summaryCopy strong {
+  font-size: clamp(1.7rem, 2vw, 2.3rem);
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.stockAlertCard {
+  align-items: center;
+}
+
+.stockAlertSummary {
+  display: grid;
+  gap: 12px;
+}
+
+.stockAlertRows {
+  display: grid;
+  gap: 10px;
+}
+
+.stockAlertLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stockAlertCount {
+  font-size: 0.99rem;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.stockAlertLink {
+  width: fit-content;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.revenuePanel,
+.topProductsPanel {
+  min-height: 360px;
+}
+
+.revenueList,
+.topProductsList {
+  display: grid;
+  gap: 18px;
+}
+
+.revenueRow {
+  display: grid;
+  gap: 10px;
+}
+
+.revenueMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.revenueMeta span {
+  color: #526071;
+  font-weight: 500;
+}
+
+.revenueMeta strong {
+  color: #0f172a;
+}
+
+.revenueTrack {
+  height: 14px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.revenueFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
+}
+
+.topProductRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.topProductRank {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.topProductCopy {
+  display: grid;
+  gap: 4px;
+}
+
+.topProductCopy strong {
+  font-size: 1.05rem;
+}
+
+.topProductCopy p {
+  margin: 0;
+  color: #64748b;
+}
+
+@media (max-width: 900px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

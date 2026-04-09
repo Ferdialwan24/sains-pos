@@ -1,0 +1,41 @@
+.listPanel {
+  width: 100%;
+}
+
+:global(.report-row).row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  column-gap: clamp(14px, 2vw, 24px);
+  align-items: center;
+}
+
+:global(.report-row).row > * {
+  min-width: 0;
+  justify-self: center;
+  text-align: center;
+}
+
+.row strong,
+.row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.report-row).rowHeader {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.rowHeader > * {
+  text-align: center;
+}
+
+.rowActions {
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}

@@ -1,0 +1,23 @@
+.filterPanel {
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
+}
+
+:global(.report-row).row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+:global(.report-row).row > * {
+  min-width: 0;
+  justify-self: center;
+  text-align: center;
+}
+
+:global(.report-row).rowHeader {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.rowHeader > * {
+  text-align: center;
+}

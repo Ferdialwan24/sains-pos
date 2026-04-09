@@ -1,0 +1,15 @@
+.listPanel {
+  width: 100%;
+}
+
+.visibilityCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rowActions {
+  justify-content: center;
+}

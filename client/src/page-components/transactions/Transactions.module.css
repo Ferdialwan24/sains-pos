@@ -1,0 +1,53 @@
+.filterPanel {
+  display: grid;
+  gap: 16px;
+}
+
+.filterGroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.table {
+  gap: 14px;
+}
+
+:global(.report-row).row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: clamp(14px, 2vw, 22px);
+  align-items: center;
+}
+
+:global(.report-row).row > * {
+  min-width: 0;
+  justify-self: center;
+  text-align: center;
+}
+
+:global(.report-row).rowHeader {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.rowHeader > * {
+  text-align: center;
+}
+
+.rowActions {
+  justify-content: center;
+}
+
+.receiptModalPanel {
+  border: none;
+  max-width: 100%;
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .row,
+  .rowHeader {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
