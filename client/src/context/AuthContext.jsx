@@ -69,6 +69,7 @@ export function AuthProvider({ children }) {
           body: JSON.stringify(credentials)
         });
 
+        setAuthToken(response.token);
         setSession({
           token: response.token,
           user: response.user
@@ -77,6 +78,7 @@ export function AuthProvider({ children }) {
         return response.user;
       },
       logout() {
+        setAuthToken(null);
         setSession(null);
       }
     }),
@@ -85,4 +87,3 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-

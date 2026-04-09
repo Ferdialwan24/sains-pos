@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FormModal } from '../../components/common/FormModal.jsx';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
-import { formatCurrency } from '../../lib/format.js';
 import styles from './TableBilling.module.css';
 
 export function TableBillingPageComponent() {
   const eyebrow = useRoleEyebrow('Cashier');
   const navigate = useNavigate();
   const [tables, setTables] = useState([]);
-  const [selectedTableId, setSelectedTableId] = useState('');
+  const [dialogTable, setDialogTable] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -37,10 +37,6 @@ export function TableBillingPageComponent() {
       const response = await apiRequest('/tables');
       setTables(response.tables);
       setErrorMessage('');
-      if (!selectedTableId && response.tables[0]) {
-        const firstActiveTable = response.tables.find((table) => getActiveOrderSnapshot(table));
-        setSelectedTableId((firstActiveTable ?? response.tables[0])._id);
-      }
     } catch (error) {
       setErrorMessage(error.message);
     } finally {
@@ -52,11 +48,27 @@ export function TableBillingPageComponent() {
     loadTables();
   }, []);
 
-  const selectedTable =
-    tables.find((table) => table._id === selectedTableId) ??
-    tables.find((table) => getActiveOrderSnapshot(table)) ??
-    tables[0];
-  const selectedActiveOrder = getActiveOrderSnapshot(selectedTable);
+  const openLoadOrderDialog = (table) => {
+    if (!getActiveOrderSnapshot(table)) {
+      return;
+    }
+
+    setDialogTable(table);
+  };
+
+  const handleLoadOrder = () => {
+    if (!dialogTable) {
+      return;
+    }
+
+    const activeOrder = getActiveOrderSnapshot(dialogTable);
+
+    navigate(
+      activeOrder?._id ? `/cashier/pos?activeOrderId=${activeOrder._id}` : `/cashier/pos?tableId=${dialogTable._id}`
+    );
+  };
+
+  const dialogActiveOrder = dialogTable ? getActiveOrderSnapshot(dialogTable) : null;
 
   return (
     <section className="page">
@@ -72,67 +84,76 @@ export function TableBillingPageComponent() {
 
       {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
 
-      <div className={`two-column-grid ${styles.layout}`}>
-        <div className={styles.grid}>
-          {isLoading ? <div className="panel">Loading tables...</div> : null}
+      <div className={styles.layout}>
+        <div className={`panel ${styles.listPanel}`}>
+          <div className="panel-heading user-list-heading">
+            <h3>Table List</h3>
+          </div>
+          {isLoading ? <p>Loading tables...</p> : null}
           {!isLoading && tables.length === 0 ? (
-            <div className="panel">No tables found. Create them from the admin tables page first.</div>
+            <p>No tables found. Create them from the admin tables page first.</p>
           ) : null}
-          {tables.map((table) => (
-            <button
-              key={table._id}
-              className={`table-card button-card ${styles.card}${table.status === 'active' ? ` ${styles.active}` : ''}${
-                selectedTable?._id === table._id ? ` ${styles.selected}` : ''
-              }`}
-              onClick={() => setSelectedTableId(table._id)}
-              type="button"
-            >
-              <span className={styles.icon} />
-              <strong>Table {table.number}</strong>
-              <p>{getActiveOrderSnapshot(table)?.customerName ?? 'No active bill'}</p>
-            </button>
-          ))}
-        </div>
+          <div className={styles.grid}>
+            {tables.map((table) => {
+              const activeOrder = getActiveOrderSnapshot(table);
 
-        <aside className="summary-card">
-          <h3>{selectedTable ? `Table ${selectedTable.number}` : 'Select a table'}</h3>
-          {!selectedTable ? <p className="muted">Choose a table to inspect its current dine-in bill.</p> : null}
-          {!selectedActiveOrder && selectedTable ? <p className="muted">This table does not have any saved dine-in bill yet.</p> : null}
-          {selectedActiveOrder ? (
-            <>
-              <p className="muted">Customer: {selectedActiveOrder.customerName}</p>
-              <div className="simple-list">
-                {selectedActiveOrder.items.map((item) => (
-                  <article key={item.product} className="list-row list-row-stack">
-                    <div>
-                      <strong>{item.name}</strong>
-                      <p className="muted compact-text">Qty {item.quantity}</p>
-                    </div>
-                    <span>{formatCurrency(item.lineTotal)}</span>
-                  </article>
-                ))}
-              </div>
-              <div className="summary-total">
-                <span>Subtotal</span>
-                <strong>{formatCurrency(selectedActiveOrder.subtotal)}</strong>
-              </div>
-              <button
-                className="primary-button"
-                onClick={() =>
-                  navigate(
-                    selectedActiveOrder._id
-                      ? `/cashier/pos?activeOrderId=${selectedActiveOrder._id}`
-                      : `/cashier/pos?tableId=${selectedTable._id}`
-                  )
-                }
-                type="button"
-              >
-                Load Order
-              </button>
-            </>
-          ) : null}
-        </aside>
+              return (
+                <button
+                  key={table._id}
+                  className={`${styles.card}${activeOrder ? ` ${styles.cardActive}` : ''}`}
+                  disabled={!activeOrder}
+                  onClick={() => openLoadOrderDialog(table)}
+                  type="button"
+                >
+                  <div className={styles.cardTop}>
+                    <span className={styles.label}>Table</span>
+                    <span className={`pill pill-${table.status}`}>{table.status}</span>
+                  </div>
+                  <strong className={styles.number}>{table.number}</strong>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
+
+      <FormModal
+        footer={
+          <>
+            <button className="secondary-button" onClick={() => setDialogTable(null)} type="button">
+              Close
+            </button>
+            <button className="primary-button" onClick={handleLoadOrder} type="button">
+              Load Order
+            </button>
+          </>
+        }
+        isOpen={Boolean(dialogTable)}
+        onClose={() => setDialogTable(null)}
+        title={dialogTable ? `Table ${dialogTable.number}` : 'Table'}
+      >
+        {dialogActiveOrder ? (
+          <div className={styles.dialogBody}>
+            <div className={styles.dialogMeta}>
+              <span className="muted">Customer</span>
+              <strong>{dialogActiveOrder.customerName}</strong>
+            </div>
+            <div className={styles.dialogItems}>
+              {dialogActiveOrder.items.map((item, index) => (
+                <div
+                  key={`${item.product ?? item.name ?? 'item'}-${index}`}
+                  className={styles.dialogItemRow}
+                >
+                  <span>{item.name}</span>
+                  <strong>x{item.quantity}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="muted">This table does not have any saved dine-in bill yet.</p>
+        )}
+      </FormModal>
     </section>
   );
 }

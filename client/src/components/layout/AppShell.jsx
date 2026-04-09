@@ -15,8 +15,8 @@ const navigationByRole = {
     { label: 'Transactions', path: '/cashier/transactions' }
   ],
   cashier: [
-    { label: 'Tables', path: '/cashier/tables' },
     { label: 'Point of Sale', path: '/cashier/pos' },
+    { label: 'Tables', path: '/cashier/tables' },
     { label: 'Transactions', path: '/cashier/transactions' }
   ]
 };

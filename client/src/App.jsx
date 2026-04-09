@@ -11,7 +11,7 @@ import { TablesPage } from './pages/admin/TablesPage.jsx';
 import { UsersPage } from './pages/admin/UsersPage.jsx';
 import { PosPage } from './pages/cashier/PosPage.jsx';
 import { TableBillingPage } from './pages/cashier/TableBillingPage.jsx';
-import { TransactionsPageLive } from './pages/cashier/TransactionsPageLive.jsx';
+import { TransactionsPage } from './pages/cashier/TransactionsPage.jsx';
 import { TransactionReceiptPage } from './pages/shared/TransactionReceiptPage.jsx';
 
 function HomeRedirect() {
@@ -38,7 +38,7 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={['cashier', 'admin']} />}>
             <Route path="/cashier/pos" element={<PosPage />} />
             <Route path="/cashier/tables" element={<TableBillingPage />} />            
-            <Route path="/cashier/transactions" element={<TransactionsPageLive />} />
+            <Route path="/cashier/transactions" element={<TransactionsPage />} />
             <Route path="/transactions/:transactionId" element={<TransactionReceiptPage />} />
           </Route>
 

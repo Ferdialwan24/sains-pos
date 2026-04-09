@@ -109,12 +109,18 @@ export function POSPageComponent() {
     loadPageData();
   }, [activeOrderIdParam, showToast, tableIdParam]);
 
-  const selectableTables = useMemo(
-    () => tables.filter((table) => table.status === 'available' || table._id === selectedTableId),
-    [selectedTableId, tables]
-  );
-
   const selectedTable = tables.find((table) => table._id === selectedTableId) ?? null;
+  const selectableTables = useMemo(
+    () =>
+      tables.filter((table) => {
+        if (table.status === 'available') {
+          return true;
+        }
+
+        return Boolean(loadedActiveOrderId && table._id === selectedTableId);
+      }),
+    [loadedActiveOrderId, selectedTableId, tables]
+  );
   const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const parsedCashReceived = Number(cashReceived);
   const cashChange =
@@ -433,11 +439,7 @@ export function POSPageComponent() {
               <div>
                 <div className="user-list-heading">
                   <h3>
-                    {loadedActiveOrderId
-                      ? `Loaded Bill${selectedTable ? ` - Table ${selectedTable.number}` : ''}`
-                      : orderType === ORDER_TYPE.DINE_IN
-                        ? 'Dine In Order'
-                        : 'Takeaway Order'}
+                    {orderType === ORDER_TYPE.DINE_IN ? 'Dine In Order' : 'Takeaway Order'}
                   </h3>
                 </div>
               </div>
@@ -481,12 +483,13 @@ export function POSPageComponent() {
                   onChange={(event) => setSelectedTableId(event.target.value)}
                   value={orderType === ORDER_TYPE.TAKEAWAY ? '' : selectedTableId}
                 >
-                  <option value="">{getTableFieldLabel(orderType, selectedTable)}</option>
+                  {!selectedTableId || orderType === ORDER_TYPE.TAKEAWAY ? (
+                    <option value="">{getTableFieldLabel(orderType, selectedTable)}</option>
+                  ) : null}
                   {orderType === ORDER_TYPE.DINE_IN
                     ? selectableTables.map((table) => (
                         <option key={table._id} value={table._id}>
                           Table {table.number}
-                          {table.status === 'active' ? ' (Active)' : ''}
                         </option>
                       ))
                     : null}

@@ -34,9 +34,9 @@
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0;
   height: 100%;
-  min-height: 900px;
+  min-height: 0;
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .menuHeading {
@@ -44,9 +44,9 @@
   margin-bottom: 18px;
 }
 
-.cardList {
+:global(.card-list).cardList {
   grid-template-columns: repeat(5, 168px);
-  grid-auto-rows: 214px;
+  grid-auto-rows: 228px;
   justify-content: space-evenly;
   justify-items: center;
   align-content: start;
@@ -54,22 +54,22 @@
   min-height: 0;
   column-gap: 12px;
   row-gap: 29px;
-  padding-top: 2px;
+  padding-top: 8px;
 }
 
-.productCard {
+:global(.product-card).productCard {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 168px;
   max-width: 168px;
   justify-self: center;
-  min-height: 214px;
-  max-height: 214px;
+  min-height: 228px;
+  max-height: 228px;
   padding: 10px;
   text-align: left;
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .productButton {
@@ -102,8 +102,8 @@
 
 .productMedia {
   width: 100%;
-  height: 108px;
-  flex: 0 0 108px;
+  height: 124px;
+  flex: 0 0 124px;
   position: relative;
   overflow: hidden;
   border-radius: 14px;
@@ -194,9 +194,9 @@
   height: 100%;
   position: static;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
-  min-height: 900px;
+  min-height: 0;
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .orderHeader {
@@ -316,6 +316,10 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+.orderItem:global(.list-row-stack) {
+  align-items: center;
+}
+
 .orderItem > div:first-child {
   min-width: 0;
   display: grid;
@@ -334,6 +338,7 @@
   display: grid;
   grid-template-columns: 96px auto 32px;
   align-items: center;
+  align-self: center;
   gap: 8px;
   justify-content: end;
 }
@@ -449,13 +454,13 @@
 }
 
 @media (max-width: 1500px) {
-  .cardList {
+  :global(.card-list).cardList {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1280px) {
-  .cardList {
+  :global(.card-list).cardList {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -491,14 +496,13 @@
     overflow: visible;
   }
 
-  .cardList {
+  :global(.card-list).cardList {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: start;
   }
 
-  .productCard {
+  :global(.product-card).productCard {
     width: auto;
-    max-width: none;
   }
 
   .menuHeading,
