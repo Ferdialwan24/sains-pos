@@ -233,7 +233,6 @@ export function ProductsPageComponent() {
           <p className="eyebrow">{eyebrow}</p>
           <h2>Manage Products</h2>
         </div>
-        <p className="muted">Products now focus on name, price, image, and optional stock tracking.</p>
       </div>
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}

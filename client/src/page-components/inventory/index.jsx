@@ -116,7 +116,6 @@ export function InventoryPageComponent() {
           <p className="eyebrow">{eyebrow}</p>
           <h2>Inventory</h2>
         </div>
-        <p className="muted">Only products with active inventory tracking appear here.</p>
       </div>
 
       <div className="user-list-section">
@@ -130,7 +129,7 @@ export function InventoryPageComponent() {
           <h3>Tracked Product List</h3>
         </div>
         {isLoading ? <p>Loading inventory...</p> : null}
-        {!isLoading && items.length === 0 ? <p>No tracked products yet. Enable inventory tracking from Products.</p> : null}
+        {!isLoading && items.length === 0 ? <p>No tracked products yet.</p> : null}
         <div className="report-table inventory-table">
           {items.length > 0 ? (
             <article className={`report-row report-row-header product-row product-row-header ${styles.productRow}`}>
@@ -258,4 +257,3 @@ export function InventoryPageComponent() {
     </section>
   );
 }
-

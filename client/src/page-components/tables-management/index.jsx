@@ -148,7 +148,6 @@ export function TablesManagementPageComponent() {
           <p className="eyebrow">{eyebrow}</p>
           <h2>Tables Management</h2>
         </div>
-        <p className="muted">Set up the physical tables before cashiers start opening bills.</p>
       </div>
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}

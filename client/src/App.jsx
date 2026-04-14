@@ -12,7 +12,6 @@ import { UsersPage } from './pages/admin/UsersPage.jsx';
 import { PosPage } from './pages/cashier/PosPage.jsx';
 import { TableBillingPage } from './pages/cashier/TableBillingPage.jsx';
 import { TransactionsPage } from './pages/cashier/TransactionsPage.jsx';
-import { TransactionReceiptPage } from './pages/shared/TransactionReceiptPage.jsx';
 
 function HomeRedirect() {
   const { isAuthenticated, isBootstrapping, user } = useAuth();
@@ -39,7 +38,6 @@ export default function App() {
             <Route path="/cashier/pos" element={<PosPage />} />
             <Route path="/cashier/tables" element={<TableBillingPage />} />            
             <Route path="/cashier/transactions" element={<TransactionsPage />} />
-            <Route path="/transactions/:transactionId" element={<TransactionReceiptPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>

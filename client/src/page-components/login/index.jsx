@@ -70,7 +70,7 @@ export function LoginPageComponent() {
             <div className={styles.logoFallback}>SP</div>
           )}
           
-          <h2>Sign in to the local POS server</h2>
+          <h2>Sign in</h2>
           
         </div>
 

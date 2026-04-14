@@ -52,6 +52,9 @@ export function POSPageComponent() {
   const [isPaying, setIsPaying] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelErrorMessage, setCancelErrorMessage] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(PAYMENT_METHOD.CASH);
   const [cashReceived, setCashReceived] = useState('');
@@ -111,22 +114,11 @@ export function POSPageComponent() {
 
   const selectedTable = tables.find((table) => table._id === selectedTableId) ?? null;
   const selectableTables = useMemo(
-    () =>
-      tables.filter((table) => {
-        if (table.status === 'available') {
-          return true;
-        }
-
-        return Boolean(loadedActiveOrderId && table._id === selectedTableId);
-      }),
-    [loadedActiveOrderId, selectedTableId, tables]
+    () => tables.filter((table) => table.status === 'available'),
+    [tables]
   );
   const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const parsedCashReceived = Number(cashReceived);
-  const cashChange =
-    selectedPaymentMethod === PAYMENT_METHOD.CASH && Number.isFinite(parsedCashReceived)
-      ? Math.max(0, parsedCashReceived - subtotal)
-      : 0;
 
   const validateDraft = ({ requireTable = orderType === ORDER_TYPE.DINE_IN } = {}) => {
     if (!customerName.trim()) {
@@ -317,19 +309,8 @@ export function POSPageComponent() {
       }
 
       const nextSuccessPayment = {
-        customerName: response.transaction.customerName,
         invoiceNo: response.transaction.invoiceNo,
-        paymentMethod: selectedPaymentMethod,
-        tableLabel: getTableSummaryLabel(orderType, selectedTable),
-        totalAmount: response.transaction.totalAmount,
-        cashReceived:
-          selectedPaymentMethod === PAYMENT_METHOD.CASH && Number.isFinite(parsedCashReceived)
-            ? parsedCashReceived
-            : null,
-        changeAmount:
-          selectedPaymentMethod === PAYMENT_METHOD.CASH && Number.isFinite(parsedCashReceived)
-            ? Math.max(0, parsedCashReceived - response.transaction.totalAmount)
-            : 0
+        totalAmount: response.transaction.totalAmount
       };
 
       resetDraft();
@@ -349,14 +330,20 @@ export function POSPageComponent() {
     }
 
     try {
+      if (!cancelReason.trim()) {
+        throw new Error('Cancel reason is required');
+      }
+
       setIsCanceling(true);
       setErrorMessage('');
+      setCancelErrorMessage('');
 
       const response = await apiRequest(`/transactions/checkout-active-order/${loadedActiveOrderId}`, {
         method: 'POST',
         body: JSON.stringify({
           status: 'cancel',
-          paymentMethod: 'cash'
+          paymentMethod: '-',
+          cancelReason: cancelReason.trim()
         })
       });
 
@@ -365,9 +352,12 @@ export function POSPageComponent() {
         message: `Open bill was closed as ${response.transaction.status}.`,
         type: 'info'
       });
-      navigate('/cashier/pos');
+      setIsCancelModalOpen(false);
+      setCancelReason('');
+      resetDraft();
+      navigate('/cashier/pos', { replace: true });
     } catch (error) {
-      setErrorMessage(error.message);
+      setCancelErrorMessage(error.message);
       showToast({
         title: 'Cancel bill failed',
         message: error.message,
@@ -385,9 +375,6 @@ export function POSPageComponent() {
             <p className="eyebrow">{eyebrow}</p>
             <h2>Point of Sale</h2>
           </div>
-        <p className={`muted ${styles.headerNote}`}>
-          Start every new order here. Dine-in can be saved as an open bill, while takeaway goes straight to payment.
-        </p>
       </div>
 
         <div className={`content-grid ${styles.contentGrid}`}>
@@ -479,12 +466,20 @@ export function POSPageComponent() {
               <label className={`field ${styles.inlineField}`}>
                 <span>Table</span>
                 <select
-                  disabled={orderType === ORDER_TYPE.TAKEAWAY}
+                  disabled={orderType === ORDER_TYPE.TAKEAWAY || Boolean(loadedActiveOrderId)}
                   onChange={(event) => setSelectedTableId(event.target.value)}
                   value={orderType === ORDER_TYPE.TAKEAWAY ? '' : selectedTableId}
                 >
-                  {!selectedTableId || orderType === ORDER_TYPE.TAKEAWAY ? (
+                  {orderType === ORDER_TYPE.TAKEAWAY ? (
                     <option value="">{getTableFieldLabel(orderType, selectedTable)}</option>
+                  ) : loadedActiveOrderId && selectedTableId ? (
+                    <option value={selectedTableId}>{getTableFieldLabel(orderType, selectedTable)}</option>
+                  ) : !selectedTableId ? (
+                    <option value="">{getTableFieldLabel(orderType, selectedTable)}</option>
+                  ) : !selectableTables.some((table) => table._id === selectedTableId) ? (
+                    <option hidden value={selectedTableId}>
+                      {getTableFieldLabel(orderType, selectedTable)}
+                    </option>
                   ) : null}
                   {orderType === ORDER_TYPE.DINE_IN
                     ? selectableTables.map((table) => (
@@ -499,7 +494,7 @@ export function POSPageComponent() {
 
             <div className={styles.itemsCard}>
               <div className={styles.summaryHead}>
-                <p className="muted">{loadedActiveOrderId ? 'Loaded order items' : 'Current order items'}</p>
+                <p className="muted">Order items</p>
                 <strong>{orderItems.length} item(s)</strong>
               </div>
 
@@ -564,6 +559,19 @@ export function POSPageComponent() {
               >
                 {isSavingBill ? 'Saving...' : 'Save Bill'}
               </button>
+              {loadedActiveOrderId ? (
+                <button
+                  className="ghost-button"
+                  disabled={isCanceling || isLoading}
+                  onClick={() => {
+                    setCancelErrorMessage('');
+                    setIsCancelModalOpen(true);
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -580,14 +588,58 @@ export function POSPageComponent() {
           >
             {isPaying ? 'Processing...' : 'Pay'}
           </button>
-
-          {loadedActiveOrderId ? (
-            <button className="ghost-button" disabled={isCanceling} onClick={handleCancelBill} type="button">
-              {isCanceling ? 'Canceling...' : 'Cancel Bill'}
-            </button>
-          ) : null}
         </aside>
       </div>
+
+      <FormModal
+        footer={
+          <>
+            <button
+              className="secondary-button"
+              onClick={() => {
+                if (isCanceling) {
+                  return;
+                }
+
+                setIsCancelModalOpen(false);
+                setCancelReason('');
+                setCancelErrorMessage('');
+              }}
+              type="button"
+            >
+              Close
+            </button>
+            <button className="ghost-button" disabled={isCanceling} onClick={handleCancelBill} type="button">
+              {isCanceling ? 'Canceling...' : 'Confirm Cancel'}
+            </button>
+          </>
+        }
+        hideHeader
+        isOpen={isCancelModalOpen}
+        onClose={() => {
+          if (isCanceling) {
+            return;
+          }
+
+          setIsCancelModalOpen(false);
+          setCancelReason('');
+          setCancelErrorMessage('');
+        }}
+        title="Cancel Bill"
+      >
+        <div className={styles.cancelModalBody}>
+          <label className="field">
+            <span>Cancel Reason</span>
+            <input
+              onChange={(event) => setCancelReason(event.target.value)}
+              placeholder="Enter reason for canceling this bill"
+              type="text"
+              value={cancelReason}
+            />
+          </label>
+          {cancelErrorMessage ? <p className="form-error">{cancelErrorMessage}</p> : null}
+        </div>
+      </FormModal>
 
       <FormModal
         footer={
@@ -690,6 +742,7 @@ export function POSPageComponent() {
       </FormModal>
 
       <FormModal
+        cardClassName={styles.successModal}
         footer={
           <button
             className="primary-button"
@@ -699,45 +752,33 @@ export function POSPageComponent() {
             Close
           </button>
         }
+        hideHeader
         isOpen={Boolean(successPayment)}
         onClose={() => setSuccessPayment(null)}
-        title="Transaction Successful"
+        title="Payment Successful"
       >
         {successPayment ? (
           <div className={styles.paymentSuccessBody}>
             <div className={styles.paymentSuccessCard}>
-              <div className={styles.paymentSummaryRow}>
-                <span>Customer</span>
-                <strong>{successPayment.customerName}</strong>
-              </div>
-              <div className={styles.paymentSummaryRow}>
-                <span>Table</span>
-                <strong>{successPayment.tableLabel}</strong>
-              </div>
-              <div className={styles.paymentSummaryRow}>
+              <div className={styles.paymentSuccessInvoice}>
                 <span>Invoice</span>
                 <strong>{successPayment.invoiceNo}</strong>
               </div>
-              <div className={styles.paymentSummaryRow}>
-                <span>Method</span>
-                <strong className="capitalize-text">{successPayment.paymentMethod}</strong>
+              <div className={styles.paymentSuccessAnimation} aria-hidden="true">
+                <div className={styles.paymentSuccessPulse} />
+                <div className={styles.paymentSuccessIcon}>
+                  <svg viewBox="0 0 24 24">
+                    <path
+                      d="M9.55 16.35 5.7 12.5l1.4-1.4 2.45 2.45 7.35-7.35 1.4 1.4-8.75 8.75Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </div>
               </div>
-              <div className={styles.paymentSummaryRow}>
-                <span>Total</span>
+              <div className={styles.paymentSuccessCopy}>
+                <span>Payment Successful</span>
                 <strong>{formatCurrency(successPayment.totalAmount)}</strong>
               </div>
-              {successPayment.paymentMethod === PAYMENT_METHOD.CASH && successPayment.cashReceived !== null ? (
-                <div className={styles.paymentSummaryRow}>
-                  <span>Cash Received</span>
-                  <strong>{formatCurrency(successPayment.cashReceived)}</strong>
-                </div>
-              ) : null}
-              {successPayment.paymentMethod === PAYMENT_METHOD.CASH && successPayment.changeAmount > 0 ? (
-                <div className={`${styles.paymentSummaryRow} ${styles.paymentChangeRow}`}>
-                  <span>Change</span>
-                  <strong>{formatCurrency(successPayment.changeAmount)}</strong>
-                </div>
-              ) : null}
             </div>
           </div>
         ) : null}

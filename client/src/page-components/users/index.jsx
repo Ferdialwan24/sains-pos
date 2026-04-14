@@ -173,8 +173,7 @@ export function UsersPageComponent() {
         <div>
           <p className="eyebrow">{eyebrow}</p>
           <h2>User Management</h2>
-        </div>
-        <p className="muted">Admin creates and maintains cashier and admin accounts from one place.</p>
+        </div> 
       </div>
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}

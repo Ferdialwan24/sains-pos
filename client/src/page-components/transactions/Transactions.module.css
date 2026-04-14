@@ -47,9 +47,176 @@
   padding: 4px 6px 8px;
 }
 
+.hiddenReceiptExport {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+  width: 360px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hiddenReceiptExport .receiptModalPanel {
+  width: 360px;
+  max-width: none;
+}
+
+.cancelDetailCard {
+  display: grid;
+  gap: 18px;
+}
+
+.cancelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+
+.cancelHeaderCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.cancelHeaderCopy strong {
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.cancelLabel {
+  color: #64748b;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.cancelMetaGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.cancelMetaItem {
+  display: grid;
+  grid-template-columns: 140px 12px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.cancelReasonCard {
+  display: grid;
+  grid-template-columns: 140px 12px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.cancelMetaItem span,
+.cancelReasonCard span,
+.cancelItemsHeader span {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.cancelMetaItem strong,
+.cancelReasonCard strong {
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.cancelItemsSection {
+  display: grid;
+  gap: 12px;
+}
+
+.cancelItemsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.cancelItemsList {
+  display: grid;
+  gap: 10px;
+}
+
+.cancelTotalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 2px 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.cancelTotalRow span {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.cancelTotalRow strong {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.cancelItemRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.cancelItemCopy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cancelItemCopy strong,
+.cancelItemTotal {
+  color: #0f172a;
+}
+
+.cancelItemCopy strong {
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.cancelItemMeta {
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.cancelItemTotal {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .row,
   .rowHeader {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .cancelMetaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cancelMetaItem {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .cancelReasonCard {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }

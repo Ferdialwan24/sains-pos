@@ -110,6 +110,86 @@ const ReceiptContent = ({ transaction, receiptRef = null }) => {
   );
 };
 
+const TransactionDetailContent = ({ transaction }) => {
+  if (!transaction) {
+    return null;
+  }
+
+  const isCanceled = transaction.status === 'cancel';
+
+  return (
+    <div className={styles.cancelDetailCard}>
+      <div className={styles.cancelHeader}>
+        <div className={styles.cancelHeaderCopy}>
+          <span className={styles.cancelLabel}>{isCanceled ? 'Canceled Transaction' : 'Paid Transaction'}</span>
+          <strong>{transaction.invoiceNo}</strong>
+        </div>
+        <span className={`pill ${isCanceled ? 'pill-cancel' : 'pill-success'}`}>{transaction.status.toUpperCase()}</span>
+      </div>
+
+      <div className={styles.cancelMetaGrid}>
+        <article className={styles.cancelMetaItem}>
+          <span>Customer</span>
+          <span>:</span>
+          <strong>{transaction.customerName}</strong>
+        </article>
+        <article className={styles.cancelMetaItem}>
+          <span>Table</span>
+          <span>:</span>
+          <strong>{getReceiptTableLabel(transaction)}</strong>
+        </article>
+        <article className={styles.cancelMetaItem}>
+          <span>Served By</span>
+          <span>:</span>
+          <strong>{transaction.cashier?.fullName ?? '-'}</strong>
+        </article>
+        <article className={styles.cancelMetaItem}>
+          <span>Date</span>
+          <span>:</span>
+          <strong>{formatDateTime(transaction.createdAt)}</strong>
+        </article>
+        <article className={styles.cancelMetaItem}>
+          <span>Payment Method</span>
+          <span>:</span>
+          <strong className={isCanceled ? '' : 'capitalize-text'}>{getReceiptPaymentLabel(transaction)}</strong>
+        </article>
+      </div>
+
+      {isCanceled ? (
+        <article className={styles.cancelReasonCard}>
+          <span>Cancel Reason</span>
+          <span>:</span>
+          <strong>{transaction.cancelReason?.trim() || '-'}</strong>
+        </article>
+      ) : null}
+
+      <div className={styles.cancelItemsSection}>
+        <div className={styles.cancelItemsHeader}>
+          <span>Order Items</span>
+          <strong>{transaction.items.length} item(s)</strong>
+        </div>
+        <div className={styles.cancelItemsList}>
+          {transaction.items.map((item) => (
+            <article key={`${transaction._id}-${item.product}`} className={styles.cancelItemRow}>
+              <div className={styles.cancelItemCopy}>
+                <strong>{item.name}</strong>
+                <span className={styles.cancelItemMeta}>
+                  {item.quantity} x {formatCurrency(item.price)}
+                </span>
+              </div>
+              <span className={styles.cancelItemTotal}>{formatCurrency(item.lineTotal)}</span>
+            </article>
+          ))}
+        </div>
+        <div className={styles.cancelTotalRow}>
+          <span>Total</span>
+          <strong>{formatCurrency(transaction.totalAmount)}</strong>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export function TransactionsPageComponent() {
   const eyebrow = useRoleEyebrow('Cashier');
   const detailReceiptRef = useRef(null);
@@ -186,7 +266,6 @@ export function TransactionsPageComponent() {
           <p className="eyebrow">{eyebrow}</p>
           <h2>Transactions</h2>
         </div>
-        <p className="muted">Final transactions are shown here with payment and cashier details.</p>
       </div>
 
       <div className={styles.filterPanel}>
@@ -255,33 +334,41 @@ export function TransactionsPageComponent() {
             <button className="secondary-button" onClick={closeDetailModal} type="button">
               Close
             </button>
-            <button
-              className="primary-button"
-              disabled={!detailTransaction}
-              onClick={() =>
-                detailTransaction &&
-                downloadReceiptPdfFromElement({
-                  element: detailReceiptRef.current,
-                  title: detailTransaction.invoiceNo
-                })
-              }
-              type="button"
-            >
-              Download Receipt
-            </button>
+            {detailTransaction?.status !== 'cancel' ? (
+              <button
+                className="primary-button"
+                disabled={!detailTransaction}
+                onClick={() =>
+                  detailTransaction &&
+                  downloadReceiptPdfFromElement({
+                    element: detailReceiptRef.current,
+                    title: detailTransaction.invoiceNo
+                  })
+                }
+                type="button"
+              >
+                Download Receipt
+              </button>
+            ) : null}
           </>
         }
         isOpen={isDetailModalOpen}
         onClose={closeDetailModal}
-        title="Transaction Detail"
+        title="Transaction Details"
       >
         {isDetailLoading ? <p>Loading transaction detail...</p> : null}
         {detailErrorMessage ? <p className="form-error">{detailErrorMessage}</p> : null}
         {!isDetailLoading && !detailErrorMessage && detailTransaction ? (
-          <ReceiptContent receiptRef={detailReceiptRef} transaction={detailTransaction} />
+          <>
+            <TransactionDetailContent transaction={detailTransaction} />
+            {detailTransaction.status !== 'cancel' ? (
+              <div aria-hidden="true" className={styles.hiddenReceiptExport}>
+                <ReceiptContent receiptRef={detailReceiptRef} transaction={detailTransaction} />
+              </div>
+            ) : null}
+          </>
         ) : null}
       </FormModal>
     </section>
   );
 }
-
