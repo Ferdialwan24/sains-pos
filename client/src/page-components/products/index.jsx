@@ -6,6 +6,7 @@ import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency } from '../../lib/format.js';
+import { DEFAULT_PRODUCT_IMAGE } from '../../lib/productImage.js';
 import styles from './Products.module.css';
 
 const defaultForm = {
@@ -261,7 +262,7 @@ export function ProductsPageComponent() {
             {products.map((product) => (
               <article key={product._id} className="report-row product-row">
                 <div className="product-table-image">
-                  {product.imageDataUrl ? <img alt={product.name} src={product.imageDataUrl} /> : <span>No image</span>}
+                  <img alt={product.name} src={product.imageDataUrl || DEFAULT_PRODUCT_IMAGE} />
                 </div>
                 <div className="product-name-cell">
                   <strong>{product.name}</strong>

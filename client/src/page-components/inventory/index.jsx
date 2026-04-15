@@ -3,6 +3,7 @@ import { FormModal } from '../../components/common/FormModal.jsx';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
+import { DEFAULT_PRODUCT_IMAGE } from '../../lib/productImage.js';
 import styles from './Inventory.module.css';
 
 const defaultForm = {
@@ -143,7 +144,7 @@ export function InventoryPageComponent() {
           {items.map((item) => (
             <article key={item._id} className={`report-row product-row ${styles.productRow}`}>
               <div className="product-table-image">
-                {item.imageDataUrl ? <img alt={item.name} src={item.imageDataUrl} /> : <span>No image</span>}
+                <img alt={item.name} src={item.imageDataUrl || DEFAULT_PRODUCT_IMAGE} />
               </div>
               <div className="product-name-cell">
                 <strong>{item.name}</strong>

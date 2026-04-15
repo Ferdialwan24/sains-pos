@@ -5,6 +5,7 @@ import { IconButton } from '../../components/common/IconButton.jsx';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { apiRequest } from '../../lib/api.js';
 import { formatCurrency } from '../../lib/format.js';
+import { DEFAULT_PRODUCT_IMAGE } from '../../lib/productImage.js';
 import { useToast } from '../../hooks/useToast.js';
 import styles from './POS.module.css';
 
@@ -404,7 +405,7 @@ export function POSPageComponent() {
                   >
                     <div className={styles.productMedia}>
                       {quantity > 0 ? <strong className={styles.quantityBadge}>x{quantity}</strong> : null}
-                      {product.imageDataUrl ? <img alt={product.name} src={product.imageDataUrl} /> : <span>No image</span>}
+                      <img alt={product.name} src={product.imageDataUrl || DEFAULT_PRODUCT_IMAGE} />
                     </div>
                   <div className={styles.productCopy}>
                     <h3>{product.name}</h3>

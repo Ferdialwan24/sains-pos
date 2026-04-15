@@ -1,6 +1,7 @@
 .filterPanel {
   display: grid;
   gap: 16px;
+  
 }
 
 .filterGroups {
@@ -64,6 +65,7 @@
 .cancelDetailCard {
   display: grid;
   gap: 18px;
+  padding: 4px 2px;
 }
 
 .cancelHeader {
@@ -168,7 +170,8 @@
   padding: 10px 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
 }
 
 .cancelItemCopy {

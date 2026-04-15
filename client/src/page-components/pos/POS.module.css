@@ -23,15 +23,15 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0;
-  height: 100%;
+  height: 97%;
   min-height: 0;
   overflow: hidden;
-  box-shadow: none !important;
+  
 }
 
 .menuHeading {
   align-items: start;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 :global(.card-list).cardList {
@@ -68,13 +68,15 @@
   transition:
     transform 160ms ease,
     border-color 160ms ease,
-    background 160ms ease;
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .productButton:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   border-color: rgba(14, 165, 233, 0.24);
-  background: rgba(248, 250, 252, 0.98);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.1) !important;
 }
 
 .productButton:disabled {
@@ -97,7 +99,7 @@
   position: relative;
   overflow: hidden;
   border-radius: 14px;
-  background: linear-gradient(180deg, #e2e8f0 0%, #f8fafc 100%);
+  background: linear-gradient(180deg, #edf4fb 0%, #f9fbfd 100%);
   display: grid;
   place-items: center;
   color: #64748b;
@@ -166,27 +168,27 @@
   min-width: 32px;
   padding: 4px 7px;
   border-radius: 999px;
-  background: #dbeafe;
-  color: #0369a1;
+  background: rgba(232, 246, 255, 0.96);
+  color: #035f96;
   font-size: 0.72rem;
   font-weight: 700;
   position: absolute;
   top: 7px;
   right: 7px;
   z-index: 1;
-  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.18);
+  box-shadow: 0 12px 22px rgba(14, 165, 233, 0.16);
 }
 
 .summaryCard {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   gap: 8px;
-  height: 100%;
+  height: 97%;
   position: static;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(245, 250, 255, 0.95) 100%);
   min-height: 0;
   overflow: hidden;
-  box-shadow: none !important;
+  
 }
 
 .orderHeader {
@@ -203,7 +205,8 @@
   gap: 6px;
   padding: 6px;
   border-radius: 14px;
-  background: #f1f5f9;
+  background: rgba(240, 245, 250, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .modeButton {
@@ -224,9 +227,9 @@
 }
 
 .modeButtonActive {
-  background: #0ea5e9;
+  background: linear-gradient(135deg, #1ea7fd 0%, #0b7fd0 100%);
   color: #03111e;
-  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.24);
+  box-shadow: 0 16px 28px rgba(11, 127, 208, 0.22);
 }
 
 .orderMeta {
@@ -299,11 +302,11 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.94);
   padding: 8px 10px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
 }
 
 .orderItem:global(.list-row-stack) {
@@ -365,7 +368,7 @@
   width: 100%;
   padding: 14px 18px;
   font-size: 1.02rem;
-  box-shadow: 0 16px 32px rgba(14, 165, 233, 0.24);
+  box-shadow: 0 18px 36px rgba(11, 127, 208, 0.28);
 }
 
 .paymentModalBody,
@@ -402,7 +405,7 @@
   padding: 16px 18px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 18px;
-  background: rgba(248, 250, 252, 0.96);
+  background: rgba(248, 251, 255, 0.9);
 }
 
 .paymentSuccessCard {
