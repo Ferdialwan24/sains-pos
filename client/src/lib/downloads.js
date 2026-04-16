@@ -64,7 +64,21 @@ export const downloadReceiptPdfFromElement = async ({ element, title }) => {
   }
 };
 
-export const downloadSalesReportExcel = ({ filename, title, rows }) => {
+export const downloadSalesReportExcel = ({
+  filename,
+  title,
+  rows,
+  columns = [
+    { key: 'invoiceNo', label: 'Invoice' },
+    { key: 'createdAt', label: 'Date' },
+    { key: 'customerName', label: 'Customer' },
+    { key: 'tableNumber', label: 'Table' },
+    { key: 'cashier', label: 'Cashier' },
+    { key: 'paymentMethod', label: 'Payment' },
+    { key: 'status', label: 'Status' },
+    { key: 'totalAmount', label: 'Total (RM)' }
+  ]
+}) => {
   const header = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office"
           xmlns:x="urn:schemas-microsoft-com:office:excel"
@@ -82,14 +96,7 @@ export const downloadSalesReportExcel = ({ filename, title, rows }) => {
         <table>
           <thead>
             <tr>
-              <th>Invoice</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Table</th>
-              <th>Cashier</th>
-              <th>Payment</th>
-              <th>Status</th>
-              <th>Total (RM)</th>
+              ${columns.map((column) => `<th>${column.label}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
@@ -99,14 +106,7 @@ export const downloadSalesReportExcel = ({ filename, title, rows }) => {
     .map(
       (row) => `
         <tr>
-          <td>${row.invoiceNo}</td>
-          <td>${row.createdAt}</td>
-          <td>${row.customerName}</td>
-          <td>${row.tableNumber}</td>
-          <td>${row.cashier}</td>
-          <td>${row.paymentMethod}</td>
-          <td>${row.status}</td>
-          <td>${row.totalAmount}</td>
+          ${columns.map((column) => `<td>${row[column.key] ?? ''}</td>`).join('')}
         </tr>
       `
     )

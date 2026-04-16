@@ -19,9 +19,15 @@ const filterOptions = [
   { value: 'custom', label: 'Select Range' }
 ];
 
+const reportTabs = [
+  { value: 'sales', label: 'Sales' },
+  { value: 'product', label: 'Product' }
+];
+
 export function SalesReportsPageComponent() {
   const eyebrow = useRoleEyebrow('Admin');
   const [transactions, setTransactions] = useState([]);
+  const [activeTab, setActiveTab] = useState('sales');
   const [rangeMode, setRangeMode] = useState('today');
   const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
   const [dateRange, setDateRange] = useState({
@@ -79,7 +85,55 @@ export function SalesReportsPageComponent() {
     [transactions]
   );
 
+  const productRows = useMemo(() => {
+    const productMap = new Map();
+
+    for (const transaction of transactions) {
+      for (const item of transaction.items ?? []) {
+        const key = String(item.product ?? item.name);
+        const current = productMap.get(key) ?? {
+          productName: item.name,
+          quantitySold: 0,
+          totalAmount: 0
+        };
+
+        current.quantitySold += Number(item.quantity ?? 0);
+        current.totalAmount += Number(item.lineTotal ?? 0);
+        productMap.set(key, current);
+      }
+    }
+
+    return Array.from(productMap.values()).sort((left, right) => {
+      if (right.quantitySold !== left.quantitySold) {
+        return right.quantitySold - left.quantitySold;
+      }
+
+      return left.productName.localeCompare(right.productName);
+    });
+  }, [transactions]);
+
+  const totalQuantitySold = useMemo(
+    () => productRows.reduce((sum, product) => sum + product.quantitySold, 0),
+    [productRows]
+  );
+
   const handleDownload = () => {
+    if (activeTab === 'product') {
+      downloadSalesReportExcel({
+        filename: `product-report-${dateRange.from}-${dateRange.to}.xls`,
+        title: 'Product Report',
+        columns: [
+          { key: 'productName', label: 'Product' },
+          { key: 'quantitySold', label: 'Qty Sold' }
+        ],
+        rows: productRows.map((product) => ({
+          productName: product.productName,
+          quantitySold: product.quantitySold
+        }))
+      });
+      return;
+    }
+
     downloadSalesReportExcel({
       filename: `sales-report-${dateRange.from}-${dateRange.to}.xls`,
       title: 'Sales Report',
@@ -133,6 +187,21 @@ export function SalesReportsPageComponent() {
         <div>
           <p className="eyebrow">{eyebrow}</p>
           <h2>Sales Reports</h2>
+        </div>
+      </div>
+
+      <div className={styles.tabBar}>
+        <div className="range-switch">
+          {reportTabs.map((tab) => (
+            <button
+              key={tab.value}
+              className={`range-switch-button${activeTab === tab.value ? ' range-switch-button-active' : ''}`}
+              onClick={() => setActiveTab(tab.value)}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -206,7 +275,7 @@ export function SalesReportsPageComponent() {
         </div>
         <button
           className={`primary-button ${styles.downloadButton}`}
-          disabled={transactions.length === 0}
+          disabled={activeTab === 'sales' ? transactions.length === 0 : productRows.length === 0}
           onClick={handleDownload}
           type="button"
         >
@@ -216,37 +285,57 @@ export function SalesReportsPageComponent() {
 
       <div className="stats-grid">
         <article className="stat-card">
-          <span>Paid Transactions</span>
-          <strong>{transactions.length}</strong>
+          <span>{activeTab === 'sales' ? 'Paid Transactions' : 'Products Sold'}</span>
+          <strong>{activeTab === 'sales' ? transactions.length : productRows.length}</strong>
         </article>
         <article className="stat-card">
-          <span>Total Sales</span>
-          <strong>{formatCurrency(totalSales)}</strong>
+          <span>{activeTab === 'sales' ? 'Total Sales' : 'Total Quantity Sold'}</span>
+          <strong>{activeTab === 'sales' ? formatCurrency(totalSales) : totalQuantitySold}</strong>
         </article>
       </div>
 
       <div className="panel">
         <div className="panel-heading user-list-heading">
-          <h3>Sales List</h3>
+          <h3>{activeTab === 'sales' ? 'Sales List' : 'Product List'}</h3>
         </div>
         {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
         {isLoading ? <p>Loading sales report...</p> : null}
-        {!isLoading && transactions.length === 0 ? <p>No paid transactions found.</p> : null}
+        {!isLoading && activeTab === 'sales' && transactions.length === 0 ? <p>No paid transactions found.</p> : null}
+        {!isLoading && activeTab === 'product' && productRows.length === 0 ? <p>No sold products found.</p> : null}
         <div className="report-table">
-          {transactions.length > 0 ? (
-            <article className={`report-row report-row-header ${styles.row} ${styles.rowHeader}`}>
-              <strong>Invoice No</strong>
-              <strong>Date</strong>
-              <strong>Amount</strong>
-            </article>
-          ) : null}
-          {transactions.map((transaction) => (
-            <article key={transaction._id} className={`report-row ${styles.row}`}>
-              <strong>{transaction.invoiceNo}</strong>
-              <span>{formatDateOnly(transaction.createdAt)}</span>
-              <span>{formatCurrency(transaction.totalAmount)}</span>
-            </article>
-          ))}
+          {activeTab === 'sales' ? (
+            <>
+              {transactions.length > 0 ? (
+                <article className={`report-row report-row-header ${styles.row} ${styles.rowHeader}`}>
+                  <strong>Invoice No</strong>
+                  <strong>Date</strong>
+                  <strong>Amount</strong>
+                </article>
+              ) : null}
+              {transactions.map((transaction) => (
+                <article key={transaction._id} className={`report-row ${styles.row}`}>
+                  <strong>{transaction.invoiceNo}</strong>
+                  <span>{formatDateOnly(transaction.createdAt)}</span>
+                  <span>{formatCurrency(transaction.totalAmount)}</span>
+                </article>
+              ))}
+            </>
+          ) : (
+            <>
+              {productRows.length > 0 ? (
+                <article className={`report-row report-row-header ${styles.row} ${styles.productRow} ${styles.rowHeader}`}>
+                  <strong>Product</strong>
+                  <strong>Qty Sold</strong>
+                </article>
+              ) : null}
+              {productRows.map((product) => (
+                <article key={product.productName} className={`report-row ${styles.row} ${styles.productRow}`}>
+                  <strong>{product.productName}</strong>
+                  <span>{product.quantitySold}</span>
+                </article>
+              ))}
+            </>
+          )}
         </div>
       </div>
     </section>
