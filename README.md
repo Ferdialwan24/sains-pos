@@ -1,65 +1,108 @@
 # Sains POS
 
-Sains POS is a MERN-based point-of-sale application for small food and beverage businesses.
-This workspace is organized as a small monorepo with separate `server` and `client`
-applications.
+Sains POS is a small point-of-sale application built for day-to-day restaurant or cafe operations.  
+The project covers the common workflow: login by role, manage products, handle dine-in and takeaway orders, save open bills by table, complete payments, and review sales activity.
 
-## Stack
+This repository is organized as a simple monorepo:
 
-- MongoDB on a local server
-- Express.js and Node.js for the backend API
-- React with Vite for the frontend
+- `client` for the React + Vite frontend
+- `server` for the Express + MongoDB backend
 
-## Project Structure
+## Tech Stack
 
-```text
-.
-├── client/
-├── server/
-├── package.json
-└── README.md
-```
+- React 18
+- Vite
+- Node.js
+- Express
+- MongoDB
+- Mongoose
 
-## Current Scope
+## What The App Does
 
 - Role-based login for `admin` and `cashier`
-- Admin user management
-- Product and inventory management
-- Restaurant table billing with active bill stored on each table
-- Transaction history with `paid` and `cancel` status
+- Admin dashboard and sales reports
+- Product management with optional categories
+- Inventory tracking for selected products
+- Table management and active dine-in bills
+- POS flow for dine-in and takeaway
+- Transaction history for `PAID` and `CANCEL`
+- Receipt export and Excel report export
 
-## Setup
 
-1. Install dependencies:
+## Getting Started
 
-   ```bash
-   npm install
-   ```
+1. Install dependencies
 
-2. Copy environment templates:
+```bash
+npm install
+```
 
-   ```bash
-   copy server\\.env.example server\\.env
-   copy client\\.env.example client\\.env
-   ```
+2. Create local environment files
 
-3. Update the MongoDB URI in `server/.env`.
+```bash
+copy server\.env.example server\.env
+copy client\.env.example client\.env
+```
 
-4. Seed the first admin:
+3. Update `server/.env`
 
-   ```bash
-   npm run seed:admin
-   ```
+Set your MongoDB connection string and any local values needed for development.
 
-5. Start the backend and frontend in separate terminals:
+4. Seed the first admin account
 
-   ```bash
-   npm run dev:server
-   npm run dev:client
-   ```
+```bash
+npm run seed:admin
+```
+
+5. Run the app
+
+Backend:
+
+```bash
+npm run dev:server
+```
+
+Frontend:
+
+```bash
+npm run dev:client
+```
+
+If you want both workspaces active during development, you can also use:
+
+```bash
+npm run dev
+```
+
+## Build
+
+Build the client:
+
+```bash
+npm run build
+```
+
+Run the backend in production mode:
+
+```bash
+npm run start
+```
+
+## Default Flow By Role
+
+- `admin` lands on the dashboard after login
+- `cashier` lands on the POS page after login
 
 ## Notes
 
-- For checkout consistency on a standalone MongoDB instance, the current implementation
-  validates stock before decrementing inventory. If you later need strict multi-document
-  atomicity, run MongoDB as a replica set and wrap checkout in transactions.
+- Inventory is now driven directly from the `products` collection.
+- Open dine-in bills are stored as active orders and linked to tables.
+- Invoice numbers use a monthly running sequence.
+- If strict multi-document checkout atomicity is needed later, MongoDB replica set transactions would be the next step.
+
+## Status
+
+This is an actively iterated internal project.  
+The codebase is focused on practical POS workflow first, then UI polish and cleanup are refined over time.
+
+
