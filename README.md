@@ -88,21 +88,6 @@ Run the backend in production mode:
 npm run start
 ```
 
-## Default Flow By Role
 
-- `admin` lands on the dashboard after login
-- `cashier` lands on the POS page after login
-
-## Notes
-
-- Inventory is now driven directly from the `products` collection.
-- Open dine-in bills are stored as active orders and linked to tables.
-- Invoice numbers use a monthly running sequence.
-- If strict multi-document checkout atomicity is needed later, MongoDB replica set transactions would be the next step.
-
-## Status
-
-This is an actively iterated internal project.  
-The codebase is focused on practical POS workflow first, then UI polish and cleanup are refined over time.
 
 
