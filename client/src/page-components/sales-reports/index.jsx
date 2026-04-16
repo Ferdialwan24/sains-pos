@@ -27,6 +27,8 @@ const reportTabs = [
 export function SalesReportsPageComponent() {
   const eyebrow = useRoleEyebrow('Admin');
   const [transactions, setTransactions] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('sales');
   const [rangeMode, setRangeMode] = useState('today');
   const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
@@ -67,8 +69,14 @@ export function SalesReportsPageComponent() {
         searchParams.set('from', dateRange.from);
         searchParams.set('to', dateRange.to);
 
-        const response = await apiRequest(`/transactions?${searchParams.toString()}`);
-        setTransactions(response.transactions);
+        const [transactionsResponse, productsResponse, categoriesResponse] = await Promise.all([
+          apiRequest(`/transactions?${searchParams.toString()}`),
+          apiRequest('/products?includeInactive=true'),
+          apiRequest('/categories')
+        ]);
+        setTransactions(transactionsResponse.transactions);
+        setProducts(productsResponse.products);
+        setCategories(categoriesResponse.categories);
         setErrorMessage('');
       } catch (error) {
         setErrorMessage(error.message);
@@ -84,8 +92,15 @@ export function SalesReportsPageComponent() {
     () => transactions.reduce((sum, transaction) => sum + transaction.totalAmount, 0),
     [transactions]
   );
+  const hasCategories = categories.length > 0;
 
   const productRows = useMemo(() => {
+    const productCategoryMap = new Map(
+      products.map((product) => [
+        String(product._id),
+        product.category?.name?.trim() ? product.category.name : '-'
+      ])
+    );
     const productMap = new Map();
 
     for (const transaction of transactions) {
@@ -93,12 +108,11 @@ export function SalesReportsPageComponent() {
         const key = String(item.product ?? item.name);
         const current = productMap.get(key) ?? {
           productName: item.name,
-          quantitySold: 0,
-          totalAmount: 0
+          categoryName: productCategoryMap.get(String(item.product)) ?? '-',
+          quantitySold: 0
         };
 
         current.quantitySold += Number(item.quantity ?? 0);
-        current.totalAmount += Number(item.lineTotal ?? 0);
         productMap.set(key, current);
       }
     }
@@ -110,7 +124,7 @@ export function SalesReportsPageComponent() {
 
       return left.productName.localeCompare(right.productName);
     });
-  }, [transactions]);
+  }, [products, transactions]);
 
   const totalQuantitySold = useMemo(
     () => productRows.reduce((sum, product) => sum + product.quantitySold, 0),
@@ -122,12 +136,19 @@ export function SalesReportsPageComponent() {
       downloadSalesReportExcel({
         filename: `product-report-${dateRange.from}-${dateRange.to}.xls`,
         title: 'Product Report',
-        columns: [
-          { key: 'productName', label: 'Product' },
-          { key: 'quantitySold', label: 'Qty Sold' }
-        ],
+        columns: hasCategories
+          ? [
+              { key: 'productName', label: 'Product' },
+              { key: 'categoryName', label: 'Category' },
+              { key: 'quantitySold', label: 'Qty Sold' }
+            ]
+          : [
+              { key: 'productName', label: 'Product' },
+              { key: 'quantitySold', label: 'Qty Sold' }
+            ],
         rows: productRows.map((product) => ({
           productName: product.productName,
+          categoryName: product.categoryName,
           quantitySold: product.quantitySold
         }))
       });
@@ -323,14 +344,23 @@ export function SalesReportsPageComponent() {
           ) : (
             <>
               {productRows.length > 0 ? (
-                <article className={`report-row report-row-header ${styles.row} ${styles.productRow} ${styles.rowHeader}`}>
+                <article
+                  className={`report-row report-row-header ${styles.row} ${styles.productRow} ${styles.rowHeader}`}
+                  style={{ gridTemplateColumns: hasCategories ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))' }}
+                >
                   <strong>Product</strong>
+                  {hasCategories ? <strong>Category</strong> : null}
                   <strong>Qty Sold</strong>
                 </article>
               ) : null}
               {productRows.map((product) => (
-                <article key={product.productName} className={`report-row ${styles.row} ${styles.productRow}`}>
+                <article
+                  key={product.productName}
+                  className={`report-row ${styles.row} ${styles.productRow}`}
+                  style={{ gridTemplateColumns: hasCategories ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))' }}
+                >
                   <strong>{product.productName}</strong>
+                  {hasCategories ? <span>{product.categoryName}</span> : null}
                   <span>{product.quantitySold}</span>
                 </article>
               ))}

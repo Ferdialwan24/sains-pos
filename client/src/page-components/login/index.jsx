@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useToast } from '../../hooks/useToast.js';
 import styles from './Login.module.css';
 
 export function LoginPageComponent() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { isAuthenticated, login, user } = useAuth();
   const { showToast } = useToast();
   const [hasLogoError, setHasLogoError] = useState(false);
@@ -36,13 +35,12 @@ export function LoginPageComponent() {
     try {
       const loggedInUser = await login(form);
       const fallbackPath = loggedInUser.role === 'admin' ? '/admin/dashboard' : '/cashier/pos';
-      const nextPath = location.state?.from?.pathname ?? fallbackPath;
       showToast({
         title: 'Login successful',
         message: `Welcome back, ${loggedInUser.fullName}.`,
         type: 'success'
       });
-      navigate(nextPath, { replace: true });
+      navigate(fallbackPath, { replace: true });
     } catch (error) {
       setErrorMessage(error.message);
       showToast({

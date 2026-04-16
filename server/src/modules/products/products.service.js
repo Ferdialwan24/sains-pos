@@ -1,3 +1,4 @@
+import { Category } from '../../models/Category.js';
 import { Product } from '../../models/Product.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { getStockAlert } from '../../utils/stockAlert.js';
@@ -36,6 +37,24 @@ const normalizeInventoryUnit = (inventoryUnit) => {
   return inventoryUnit;
 };
 
+const normalizeCategoryId = async (categoryId) => {
+  if (categoryId === undefined) {
+    return undefined;
+  }
+
+  if (categoryId === null || categoryId === '') {
+    return null;
+  }
+
+  const category = await Category.findById(categoryId).select('name');
+
+  if (!category) {
+    throw new ApiError(404, 'Category not found');
+  }
+
+  return category._id;
+};
+
 const toProductPayload = (productDocument) => {
   const product = productDocument.toObject();
   const inventoryQuantity = product.trackInventory ? product.inventoryQuantity ?? 0 : null;
@@ -44,6 +63,12 @@ const toProductPayload = (productDocument) => {
 
   return {
     ...product,
+    category: product.category
+      ? {
+          _id: product.category._id,
+          name: product.category.name
+        }
+      : null,
     availability: {
       isAvailable: product.trackInventory ? inventoryQuantity > 0 : true,
       maxOrderQuantity,
@@ -55,7 +80,7 @@ const toProductPayload = (productDocument) => {
 
 export const listProducts = async ({ includeInactive = false } = {}) => {
   const filter = includeInactive ? {} : { isActive: true };
-  const products = await Product.find(filter).sort({ name: 1 });
+  const products = await Product.find(filter).populate('category', 'name').sort({ name: 1 });
 
   return products.map(toProductPayload);
 };
@@ -63,6 +88,7 @@ export const listProducts = async ({ includeInactive = false } = {}) => {
 export const createProduct = async ({
   name,
   price,
+  categoryId,
   imageDataUrl,
   trackInventory = false,
   inventoryQuantity = 0,
@@ -89,15 +115,22 @@ export const createProduct = async ({
     throw new ApiError(400, 'Low stock threshold is required when inventory tracking is active');
   }
 
-  return Product.create({
+  const category = await normalizeCategoryId(categoryId);
+
+  const product = await Product.create({
     name: name.trim(),
     price,
+    category,
     imageDataUrl: normalizeImageDataUrl(imageDataUrl) ?? null,
     trackInventory: Boolean(trackInventory),
     inventoryQuantity: trackInventory ? inventoryQuantity : 0,
     inventoryUnit: normalizeInventoryUnit(inventoryUnit) ?? 'pcs',
     lowStockThreshold
   });
+
+  await product.populate('category', 'name');
+
+  return product;
 };
 
 export const updateProduct = async (productId, payload) => {
@@ -125,6 +158,12 @@ export const updateProduct = async (productId, payload) => {
     }
 
     product.price = payload.price;
+  }
+
+  const normalizedCategoryId = await normalizeCategoryId(payload.categoryId);
+
+  if (normalizedCategoryId !== undefined) {
+    product.category = normalizedCategoryId;
   }
 
   const normalizedImageDataUrl = normalizeImageDataUrl(payload.imageDataUrl);
@@ -172,6 +211,7 @@ export const updateProduct = async (productId, payload) => {
   }
 
   await product.save();
+  await product.populate('category', 'name');
 
   return product;
 };

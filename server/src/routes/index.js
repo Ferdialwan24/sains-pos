@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { categoriesRouter } from '../modules/categories/categories.routes.js';
 import { activeOrdersRouter } from '../modules/active-orders/activeOrders.routes.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
 import { inventoryRouter } from '../modules/inventory/inventory.routes.js';
@@ -11,6 +12,7 @@ export const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/users', usersRouter);
+apiRouter.use('/categories', categoriesRouter);
 apiRouter.use('/inventory', inventoryRouter);
 apiRouter.use('/products', productsRouter);
 apiRouter.use('/active-orders', activeOrdersRouter);

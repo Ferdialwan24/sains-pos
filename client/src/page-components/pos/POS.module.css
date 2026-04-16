@@ -29,9 +29,99 @@
   
 }
 
+.menuTop {
+  display: grid;
+
+  padding-bottom: 8px;
+}
+
 .menuHeading {
   align-items: start;
-  margin-bottom: 20px;
+  margin-bottom: 0;
+}
+
+.productToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.searchControl,
+.categoryControl {
+  min-width: 0;
+  margin: 0;
+}
+
+.searchControl {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 320px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.searchControl:focus-within,
+.categoryControl:focus-within {
+  border-color: rgba(30, 167, 253, 0.36);
+  box-shadow: 0 0 0 4px rgba(30, 167, 253, 0.12);
+}
+
+.searchIcon {
+  display: grid;
+  place-items: center;
+  color: #64748b;
+}
+
+.searchIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.searchControl input,
+.categoryControl select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 0.92rem;
+  color: #0f172a;
+  outline: none;
+  box-shadow: none;
+}
+
+.searchControl input::placeholder {
+  color: #94a3b8;
+}
+
+.categoryControl {
+  display: flex;
+  align-items: center;
+  flex: 0 0 210px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
 }
 
 :global(.card-list).cardList {
@@ -626,6 +716,18 @@
   .summaryHead {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .menuTop,
+  .productToolbar {
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .searchControl,
+  .categoryControl {
+    flex: 1 1 100%;
+    width: 100%;
   }
 
   .inlineField {

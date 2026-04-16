@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { ConfirmDialog } from '../common/ConfirmDialog.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useToast } from '../../hooks/useToast.js';
 import navLogoImage from '../../../nav-logo.png';
@@ -105,6 +106,7 @@ export function AppShell() {
   const { logout, user } = useAuth();
   const { showToast } = useToast();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const navigation = navigationByRole[user?.role] ?? [];
   const currentPageTitle = pageTitleByPath[location.pathname] ?? 'Page';
   const pageContentClassName = location.pathname.startsWith('/cashier/pos')
@@ -115,6 +117,7 @@ export function AppShell() {
 
   const handleLogout = () => {
     logout();
+    setIsLogoutDialogOpen(false);
     showToast({
       title: 'Logged out',
       message: 'Your session has been closed.',
@@ -181,7 +184,7 @@ export function AppShell() {
             aria-label="Logout"
             className="logout-button"
             data-tooltip="Logout"
-            onClick={handleLogout}
+            onClick={() => setIsLogoutDialogOpen(true)}
             title={!isSidebarOpen ? 'Logout' : undefined}
             type="button"
           >
@@ -222,6 +225,16 @@ export function AppShell() {
           
         </div>
         <Outlet />
+        <ConfirmDialog
+          cancelLabel="Stay"
+          confirmLabel="Logout"
+          confirmButtonClassName="logout-confirm-button"
+          isOpen={isLogoutDialogOpen}
+          message="You will end the current session and return to the login page."
+          onClose={() => setIsLogoutDialogOpen(false)}
+          onConfirm={handleLogout}
+          title="Logout now?"
+        />
       </main>
     </div>
   );

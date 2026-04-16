@@ -24,7 +24,7 @@ function HomeRedirect() {
     return <Navigate to="/login" replace />;
   }
 
-  return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/cashier/tables'} replace />;
+  return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/cashier/pos'} replace />;
 }
 
 export default function App() {

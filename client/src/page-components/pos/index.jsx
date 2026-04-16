@@ -42,6 +42,9 @@ export function POSPageComponent() {
   const activeOrderIdParam = searchParams.get('activeOrderId');
   const tableIdParam = searchParams.get('tableId');
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('');
   const [tables, setTables] = useState([]);
   const [orderType, setOrderType] = useState(ORDER_TYPE.DINE_IN);
   const [customerName, setCustomerName] = useState('');
@@ -75,9 +78,14 @@ export function POSPageComponent() {
       setIsLoading(true);
 
       try {
-        const [productsResponse, tablesResponse] = await Promise.all([apiRequest('/products'), apiRequest('/tables')]);
+        const [productsResponse, categoriesResponse, tablesResponse] = await Promise.all([
+          apiRequest('/products'),
+          apiRequest('/categories'),
+          apiRequest('/tables')
+        ]);
 
         setProducts(productsResponse.products);
+        setCategories(categoriesResponse.categories);
         setTables(tablesResponse.tables);
 
         if (activeOrderIdParam) {
@@ -114,12 +122,38 @@ export function POSPageComponent() {
   }, [activeOrderIdParam, showToast, tableIdParam]);
 
   const selectedTable = tables.find((table) => table._id === selectedTableId) ?? null;
+  const productCategories = useMemo(
+    () => [...categories].sort((left, right) => left.name.localeCompare(right.name)),
+    [categories]
+  );
+  const hasProductCategories = productCategories.length > 0;
   const selectableTables = useMemo(
     () => tables.filter((table) => table.status === 'available'),
     [tables]
   );
+  const filteredProducts = useMemo(() => {
+    const normalizedQuery = productSearch.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const matchesSearch = !normalizedQuery || product.name.toLowerCase().includes(normalizedQuery);
+      const matchesCategory = !productCategoryFilter || product.category?._id === productCategoryFilter;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [productCategoryFilter, productSearch, products]);
   const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const parsedCashReceived = Number(cashReceived);
+
+  useEffect(() => {
+    if (!hasProductCategories) {
+      setProductCategoryFilter('');
+      return;
+    }
+
+    if (productCategoryFilter && !productCategories.some((category) => category._id === productCategoryFilter)) {
+      setProductCategoryFilter('');
+    }
+  }, [hasProductCategories, productCategories, productCategoryFilter]);
 
   const validateDraft = ({ requireTable = orderType === ORDER_TYPE.DINE_IN } = {}) => {
     if (!customerName.trim()) {
@@ -383,17 +417,55 @@ export function POSPageComponent() {
 
         <div className={`content-grid ${styles.contentGrid}`}>
           <div className={`panel ${styles.menuPanel}`}>
-            <div className={`panel-heading ${styles.menuHeading}`}>
-              <div>
-                <div className="user-list-heading">
-                  <h3>Product</h3>
+            <div className={styles.menuTop}>
+              <div className={`panel-heading ${styles.menuHeading}`}>
+                <div>
+                  <div className="user-list-heading">
+                    <h3>Product</h3>
+                  </div>
                 </div>
+              </div>
+              <div className={styles.productToolbar}>
+                <label aria-label="Search product" className={styles.searchControl}>
+                  <span className={styles.searchIcon} aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path
+                        d="M10.5 4a6.5 6.5 0 1 0 4.03 11.6l4.44 4.44 1.41-1.41-4.44-4.44A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </span>
+                  <input
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Search product"
+                    type="search"
+                    value={productSearch}
+                  />
+                </label>
+                {hasProductCategories ? (
+                  <label aria-label="Filter category" className={styles.categoryControl}>
+                    <select
+                      onChange={(event) => setProductCategoryFilter(event.target.value)}
+                      value={productCategoryFilter}
+                    >
+                      <option value="">All</option>
+                      {productCategories.map((category) => (
+                        <option key={category._id} value={category._id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
               </div>
             </div>
             {isLoading ? <div className="panel">Loading POS data...</div> : null}
             {!isLoading && products.length === 0 ? <div className="panel">No products available yet.</div> : null}
+            {!isLoading && products.length > 0 && filteredProducts.length === 0 ? (
+              <div className="panel">No products match the current filter.</div>
+            ) : null}
             <div className={`card-list ${styles.cardList}`}>
-              {products.map((product) => {
+              {filteredProducts.map((product) => {
                 const quantity = orderItems.find((item) => item.productId === product._id)?.quantity ?? 0;
 
                 return (

@@ -6,6 +6,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = 'Yes',
   cancelLabel = 'No',
+  confirmButtonClassName = 'primary-button',
   onConfirm,
   onClose,
   isConfirming = false
@@ -17,7 +18,7 @@ export function ConfirmDialog({
           <button className="secondary-button" onClick={onClose} type="button">
             {cancelLabel}
           </button>
-          <button className="primary-button" disabled={isConfirming} onClick={onConfirm} type="button">
+          <button className={confirmButtonClassName} disabled={isConfirming} onClick={onConfirm} type="button">
             {isConfirming ? 'Processing...' : confirmLabel}
           </button>
         </>

@@ -81,7 +81,7 @@ const summaryCards = [
   },
   {
     key: 'stockAlerts',
-    title: 'Stock alerts active',
+    title: 'Stock alerts',
     variant: styles.summaryIconRed,
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
