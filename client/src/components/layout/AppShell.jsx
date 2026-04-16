@@ -12,6 +12,7 @@ const navigationByRole = {
     { label: 'Tables Management', icon: 'settings', path: '/admin/tables' },
     { label: 'Products', icon: 'products', path: '/admin/products' },
     { label: 'Inventory', icon: 'inventory', path: '/admin/inventory' },
+    { label: 'Point of Sale', icon: 'pos', path: '/cashier/pos' },
     { label: 'Tables', icon: 'tables', path: '/cashier/tables' },
     { label: 'Transactions', icon: 'transactions', path: '/cashier/transactions' }
   ],
@@ -172,11 +173,10 @@ export function AppShell() {
           
         </nav>
         <div className="sidebar-footer">
+          <div className="sidebar-user">
             <strong>{user?.fullName}</strong>
             <span>{user?.role}</span>
           </div>
-        <div className="sidebar-footer">
-          
           <button
             aria-label="Logout"
             className="logout-button"

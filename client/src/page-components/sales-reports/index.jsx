@@ -134,9 +134,6 @@ export function SalesReportsPageComponent() {
           <p className="eyebrow">{eyebrow}</p>
           <h2>Sales Reports</h2>
         </div>
-        <button className="primary-button" disabled={transactions.length === 0} onClick={handleDownload} type="button">
-          Download Excel
-        </button>
       </div>
 
       <div className={styles.filterPanel}>
@@ -205,8 +202,16 @@ export function SalesReportsPageComponent() {
                 </button>
               </div>
             </div>
-          ) : null}
+            ) : null}
         </div>
+        <button
+          className={`primary-button ${styles.downloadButton}`}
+          disabled={transactions.length === 0}
+          onClick={handleDownload}
+          type="button"
+        >
+          Download Excel
+        </button>
       </div>
 
       <div className="stats-grid">

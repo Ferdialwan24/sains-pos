@@ -66,7 +66,7 @@ const ReceiptContent = ({ transaction, receiptRef = null }) => {
         </div>
         <div className="receipt-status-row">
           <span className={`pill receipt-status-pill ${transaction.status === 'paid' ? 'pill-success' : 'pill-cancel'}`}>
-            {transaction.status}
+            {transaction.status.toUpperCase()}
           </span>
         </div>
       </div>
@@ -317,7 +317,7 @@ export function TransactionsPageComponent() {
             <article key={transaction._id} className={`report-row ${styles.row}`}>
               <strong>{transaction.invoiceNo}</strong>
               <span className={`pill ${transaction.status === 'paid' ? 'pill-success' : 'pill-cancel'}`}>
-                {transaction.status}
+                {transaction.status.toUpperCase()}
               </span>
               <span>{formatCurrency(transaction.totalAmount)}</span>
               <div className={`row-actions ${styles.rowActions}`}>

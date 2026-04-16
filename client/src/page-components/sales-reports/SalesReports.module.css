@@ -1,7 +1,14 @@
 .filterPanel {
-  width: fit-content;
-  max-width: 100%;
-  justify-self: start;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.downloadButton {
+  flex: 0 0 auto;
 }
 
 :global(.report-row).row {
