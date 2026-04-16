@@ -282,6 +282,8 @@ export function POSPageComponent() {
       setPaymentErrorMessage('');
 
       let response;
+      const changeAmount =
+        selectedPaymentMethod === PAYMENT_METHOD.CASH ? Math.max(0, parsedCashReceived - subtotal) : null;
 
       if (loadedActiveOrderId) {
         await syncLoadedActiveOrder();
@@ -311,7 +313,8 @@ export function POSPageComponent() {
 
       const nextSuccessPayment = {
         invoiceNo: response.transaction.invoiceNo,
-        totalAmount: response.transaction.totalAmount
+        totalAmount: response.transaction.totalAmount,
+        changeAmount
       };
 
       resetDraft();
@@ -779,6 +782,12 @@ export function POSPageComponent() {
               <div className={styles.paymentSuccessCopy}>
                 <span>Payment Successful</span>
                 <strong>{formatCurrency(successPayment.totalAmount)}</strong>
+                {successPayment.changeAmount && successPayment.changeAmount > 0 ? (
+                  <div className={styles.paymentSuccessChange}>
+                    <span>Change</span>
+                    <strong>{formatCurrency(successPayment.changeAmount)}</strong>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

@@ -2,10 +2,11 @@ import { ORDER_TYPE, ORDER_TYPE_VALUES } from '../../constants/orderType.js';
 import { TABLE_STATUS } from '../../constants/tableStatus.js';
 import { TRANSACTION_STATUS } from '../../constants/transactionStatus.js';
 import { ActiveOrder } from '../../models/ActiveOrder.js';
+import { InvoiceSequence } from '../../models/InvoiceSequence.js';
 import { Table } from '../../models/Table.js';
 import { Transaction } from '../../models/Transaction.js';
 import { ApiError } from '../../utils/ApiError.js';
-import { createInvoiceNumber } from '../../utils/invoice.js';
+import { formatInvoiceNumber, getInvoiceDatePart, getInvoiceMonthKey } from '../../utils/invoice.js';
 import { applyInventoryUsage, buildOrderItems, calculateSubtotal } from '../../utils/orderItems.js';
 
 const ensureCheckoutStatus = (status) => {
@@ -66,6 +67,53 @@ const clearTableActiveOrder = async (tableId) => {
   await table.save();
 };
 
+const createMonthlyInvoiceNumber = async (now = new Date()) => {
+  const monthKey = getInvoiceMonthKey(now);
+  let sequenceRecord = await InvoiceSequence.findOneAndUpdate(
+    { monthKey },
+    {
+      $inc: { lastSequence: 1 }
+    },
+    {
+      new: true
+    }
+  );
+
+  if (!sequenceRecord) {
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const monthlyTransactionCount = await Transaction.countDocuments({
+      createdAt: {
+        $gte: monthStart,
+        $lte: monthEnd
+      }
+    });
+
+    try {
+      sequenceRecord = await InvoiceSequence.create({
+        monthKey,
+        lastSequence: monthlyTransactionCount + 1
+      });
+    } catch (error) {
+      if (error?.code !== 11000) {
+        throw error;
+      }
+
+      sequenceRecord = await InvoiceSequence.findOneAndUpdate(
+        { monthKey },
+        {
+          $inc: { lastSequence: 1 }
+        },
+        {
+          new: true
+        }
+      );
+    }
+  }
+
+  return formatInvoiceNumber(getInvoiceDatePart(now), sequenceRecord.lastSequence);
+};
+
 const createFinalTransaction = async ({
   orderType,
   table,
@@ -77,9 +125,11 @@ const createFinalTransaction = async ({
   cashierId
 }) => {
   const subtotal = calculateSubtotal(items);
+  const finalizedAt = new Date();
+  const invoiceNo = await createMonthlyInvoiceNumber(finalizedAt);
 
   return Transaction.create({
-    invoiceNo: createInvoiceNumber(),
+    invoiceNo,
     orderType,
     table: table?.id ?? null,
     tableNumber: table?.number ?? null,
@@ -91,7 +141,7 @@ const createFinalTransaction = async ({
     items,
     subtotal,
     totalAmount: subtotal,
-    finalizedAt: new Date()
+    finalizedAt
   });
 };
 
