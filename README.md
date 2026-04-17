@@ -3,10 +3,6 @@
 Sains POS is a small point-of-sale application built for day-to-day restaurant or cafe operations.  
 The project covers the common workflow: login by role, manage products, handle dine-in and takeaway orders, save open bills by table, complete payments, and review sales activity.
 
-This repository is organized as a simple monorepo:
-
-- `client` for the React + Vite frontend
-- `server` for the Express + MongoDB backend
 
 ## Tech Stack
 
@@ -87,7 +83,3 @@ Run the backend in production mode:
 ```bash
 npm run start
 ```
-
-
-
-
