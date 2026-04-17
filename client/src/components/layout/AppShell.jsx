@@ -3,7 +3,8 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { ConfirmDialog } from '../common/ConfirmDialog.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useToast } from '../../hooks/useToast.js';
-import navLogoImage from '../../../nav-logo.png';
+
+const NAV_LOGO_IMAGE = '/nav-logo.png';
 
 const navigationByRole = {
   admin: [
@@ -220,7 +221,7 @@ export function AppShell() {
           </svg>
         </button>
         <div className="shell-page-header">
-          <img alt="Sains POS logo" className="shell-page-logo" src={navLogoImage} />
+          <img alt="Sains POS logo" className="shell-page-logo" src={NAV_LOGO_IMAGE} />
           <div className="shell-page-title">{currentPageTitle}</div>
           
         </div>
