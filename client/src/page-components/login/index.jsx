@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useToast } from '../../hooks/useToast.js';
+import brandLogoImage from '../../assets/brand-logo.jpg';
 import styles from './Login.module.css';
-
-const BRAND_LOGO_IMAGE = '/brand-logo.jpg';
 
 export function LoginPageComponent() {
   const navigate = useNavigate();
@@ -64,7 +63,7 @@ export function LoginPageComponent() {
               alt="Sains POS logo"
               className={styles.logoImage}
               onError={() => setHasLogoError(true)}
-              src={BRAND_LOGO_IMAGE}
+              src={brandLogoImage}
             />
           ) : (
             <div className={styles.logoFallback}>SP</div>
