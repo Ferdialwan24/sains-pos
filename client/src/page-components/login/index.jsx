@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useToast } from '../../hooks/useToast.js';
-import brandLogoImage from '../../assets/brand-logo.jpg';
+import brandLogoImage from '../../assets/brand-logov2.1.png';
 import styles from './Login.module.css';
 
 export function LoginPageComponent() {
