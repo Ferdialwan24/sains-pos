@@ -34,6 +34,29 @@ const getTableFieldLabel = (orderType, table) =>
 const getTableSummaryLabel = (orderType, table) =>
   orderType === ORDER_TYPE.TAKEAWAY ? 'Takeaway' : table ? `Table ${table.number}` : '-';
 
+const sanitizeDecimalInput = (value) => {
+  const normalized = value.replace(/,/g, '.').replace(/[^\d.]/g, '');
+  const firstDecimalSeparator = normalized.indexOf('.');
+
+  if (firstDecimalSeparator === -1) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, firstDecimalSeparator + 1)}${normalized.slice(firstDecimalSeparator + 1).replace(/\./g, '')}`;
+};
+
+const parseDecimalValue = (value) => {
+  const normalized = sanitizeDecimalInput(value).trim();
+
+  if (!normalized || normalized === '.') {
+    return null;
+  }
+
+  const parsedValue = Number(normalized);
+
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+};
+
 export function POSPageComponent() {
   const eyebrow = useRoleEyebrow('Cashier');
   const navigate = useNavigate();
@@ -142,7 +165,7 @@ export function POSPageComponent() {
     });
   }, [productCategoryFilter, productSearch, products]);
   const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
-  const parsedCashReceived = Number(cashReceived);
+  const parsedCashReceived = parseDecimalValue(cashReceived);
 
   useEffect(() => {
     if (!hasProductCategories) {
@@ -796,7 +819,7 @@ export function POSPageComponent() {
                 <span>Cash Received</span>
                 <input
                   inputMode="decimal"
-                  onChange={(event) => setCashReceived(event.target.value)}
+                  onChange={(event) => setCashReceived(sanitizeDecimalInput(event.target.value))}
                   placeholder="Enter cash amount"
                   value={cashReceived}
                 />
