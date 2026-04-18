@@ -19,6 +19,7 @@ const defaultForm = {
   price: '',
   categoryId: '',
   imageDataUrl: null,
+  imageChanged: false,
   trackInventory: false,
   lowStockThreshold: ''
 };
@@ -34,6 +35,31 @@ const readFileAsDataUrl = (file) =>
     reader.onerror = () => reject(new Error('Unable to read image file'));
     reader.readAsDataURL(file);
   });
+
+const MAX_PRODUCT_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+const sanitizeDecimalInput = (value) => {
+  const normalized = value.replace(/,/g, '.').replace(/[^\d.]/g, '');
+  const firstDecimalSeparator = normalized.indexOf('.');
+
+  if (firstDecimalSeparator === -1) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, firstDecimalSeparator + 1)}${normalized.slice(firstDecimalSeparator + 1).replace(/\./g, '')}`;
+};
+
+const parseDecimalValue = (value) => {
+  const normalized = sanitizeDecimalInput(value).trim();
+
+  if (!normalized || normalized === '.') {
+    return null;
+  }
+
+  const parsedValue = Number(normalized);
+
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+};
 
 export function ProductsPageComponent() {
   const eyebrow = useRoleEyebrow('Admin');
@@ -147,7 +173,7 @@ export function ProductsPageComponent() {
     const { name, value } = event.target;
     setForm((currentForm) => ({
       ...currentForm,
-      [name]: value
+      [name]: name === 'price' ? sanitizeDecimalInput(value) : value
     }));
   };
 
@@ -165,14 +191,23 @@ export function ProductsPageComponent() {
       return;
     }
 
+    if (file.size > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
+      setErrorMessage('Product image must be 5 MB or smaller');
+      event.target.value = '';
+      return;
+    }
+
     try {
       const imageDataUrl = await readFileAsDataUrl(file);
       setForm((currentForm) => ({
         ...currentForm,
-        imageDataUrl
+        imageDataUrl,
+        imageChanged: true
       }));
     } catch (error) {
       setErrorMessage(error.message);
+    } finally {
+      event.target.value = '';
     }
   };
 
@@ -183,6 +218,7 @@ export function ProductsPageComponent() {
       price: String(product.price),
       categoryId: product.category?._id ?? '',
       imageDataUrl: product.imageDataUrl ?? null,
+      imageChanged: false,
       trackInventory: product.trackInventory ?? false,
       lowStockThreshold:
         product.trackInventory && (product.lowStockThreshold ?? 0) > 0 ? String(product.lowStockThreshold) : ''
@@ -213,14 +249,23 @@ export function ProductsPageComponent() {
     setErrorMessage('');
 
     try {
+      const parsedPrice = parseDecimalValue(form.price);
+
+      if (parsedPrice === null || parsedPrice < 0) {
+        throw new Error('Product price must be a valid number');
+      }
+
       const payload = {
         name: form.name,
-        price: Number(form.price),
-        imageDataUrl: form.imageDataUrl,
+        price: parsedPrice,
         categoryId: hasCategories ? form.categoryId || null : null,
         trackInventory: form.trackInventory,
         lowStockThreshold: form.trackInventory ? Number(form.lowStockThreshold) : 0
       };
+
+      if (!editingProductId || form.imageChanged) {
+        payload.imageDataUrl = form.imageDataUrl;
+      }
 
       if (editingProductId) {
         await apiRequest(`/products/${editingProductId}`, {
@@ -597,7 +642,15 @@ export function ProductsPageComponent() {
           </label>
           <label className="field">
             <span>Price</span>
-            <input min="0" name="price" onChange={handleChange} required type="number" value={form.price} />
+            <input
+              inputMode="decimal"
+              name="price"
+              onChange={handleChange}
+              placeholder="10.50"
+              required
+              type="text"
+              value={form.price}
+            />
           </label>
           {hasCategories ? (
             <label className="field">
@@ -623,7 +676,9 @@ export function ProductsPageComponent() {
                 <img alt="Product preview" src={form.imageDataUrl} />
                 <button
                   className="secondary-button small-button"
-                  onClick={() => setForm((currentForm) => ({ ...currentForm, imageDataUrl: null }))}
+                  onClick={() =>
+                    setForm((currentForm) => ({ ...currentForm, imageDataUrl: null, imageChanged: true }))
+                  }
                   type="button"
                 >
                   Remove image

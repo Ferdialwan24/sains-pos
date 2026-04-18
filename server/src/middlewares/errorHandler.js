@@ -21,6 +21,12 @@ export const errorHandler = (error, _request, response, _next) => {
     });
   }
 
+  if (error?.type === 'entity.too.large') {
+    return response.status(413).json({
+      message: 'Uploaded image is too large. Please use an image smaller than 5 MB.'
+    });
+  }
+
   console.error(error);
 
   return response.status(500).json({

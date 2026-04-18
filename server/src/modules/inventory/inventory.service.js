@@ -5,7 +5,7 @@ import { getStockAlert } from '../../utils/stockAlert.js';
 export const listInventoryItems = async () => {
   const items = await Product.find({ trackInventory: true, isActive: true })
     .select('name imageDataUrl inventoryQuantity inventoryUnit isActive lowStockThreshold trackInventory')
-    .sort({ name: 1 });
+    .sort({ createdAt: 1, _id: 1 });
 
   return items.map((item) => {
     const payload = item.toObject();

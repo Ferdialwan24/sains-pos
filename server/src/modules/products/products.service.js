@@ -4,6 +4,14 @@ import { ApiError } from '../../utils/ApiError.js';
 import { getStockAlert } from '../../utils/stockAlert.js';
 
 const INVENTORY_UNITS = new Set(['pcs', 'gr', 'ml']);
+const MAX_PRODUCT_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+const getBase64SizeInBytes = (dataUrl) => {
+  const base64Value = dataUrl.split(',')[1] ?? '';
+  const paddingLength = base64Value.endsWith('==') ? 2 : base64Value.endsWith('=') ? 1 : 0;
+
+  return Math.ceil((base64Value.length * 3) / 4) - paddingLength;
+};
 
 const normalizeImageDataUrl = (imageDataUrl) => {
   if (imageDataUrl === undefined) {
@@ -16,6 +24,10 @@ const normalizeImageDataUrl = (imageDataUrl) => {
 
   if (typeof imageDataUrl !== 'string' || !imageDataUrl.startsWith('data:image/')) {
     throw new ApiError(400, 'Product image must be a valid image upload');
+  }
+
+  if (getBase64SizeInBytes(imageDataUrl) > MAX_PRODUCT_IMAGE_SIZE_BYTES) {
+    throw new ApiError(400, 'Product image must be 5 MB or smaller');
   }
 
   return imageDataUrl;
@@ -80,7 +92,9 @@ const toProductPayload = (productDocument) => {
 
 export const listProducts = async ({ includeInactive = false } = {}) => {
   const filter = includeInactive ? {} : { isActive: true };
-  const products = await Product.find(filter).populate('category', 'name').sort({ name: 1 });
+  const products = await Product.find(filter)
+    .populate('category', 'name')
+    .sort({ createdAt: 1, _id: 1 });
 
   return products.map(toProductPayload);
 };

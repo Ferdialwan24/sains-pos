@@ -13,7 +13,11 @@ app.use(
     credentials: true
   })
 );
-app.use(express.json());
+app.use(
+  express.json({
+    limit: '10mb'
+  })
+);
 app.use(morgan('dev'));
 
 app.get('/health', (_request, response) => {
@@ -25,4 +29,3 @@ app.get('/health', (_request, response) => {
 app.use('/api', apiRouter);
 app.use(notFound);
 app.use(errorHandler);
-

@@ -16,7 +16,7 @@ const toCategoryPayload = (category) => ({
 });
 
 export const listCategories = async () => {
-  const categories = await Category.find().sort({ name: 1 });
+  const categories = await Category.find().sort({ createdAt: 1, _id: 1 });
   return categories.map(toCategoryPayload);
 };
 
