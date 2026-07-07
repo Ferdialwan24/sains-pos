@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useToast } from '../../hooks/useToast.js';
-import brandLogoImage from '../../assets/brand-logov2.1.png';
 import styles from './Login.module.css';
 
 export function LoginPageComponent() {
   const navigate = useNavigate();
   const { isAuthenticated, login, user } = useAuth();
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, []);
   const { showToast } = useToast();
-  const [hasLogoError, setHasLogoError] = useState(false);
   const [form, setForm] = useState({
     username: '',
     password: ''
@@ -56,53 +59,66 @@ export function LoginPageComponent() {
 
   return (
     <section className={styles.page}>
-      <div className={styles.card}>
-        <div className={styles.brand}>
-          {!hasLogoError ? (
-            <img
-              alt="Sains POS logo"
-              className={styles.logoImage}
-              onError={() => setHasLogoError(true)}
-              src={brandLogoImage}
-            />
-          ) : (
-            <div className={styles.logoFallback}>SP</div>
-          )}
-          
-          <h2>Sign in</h2>
-          
+      <div className={styles.container}>
+        <div className={styles.brandPanel}>
+          <div className={styles.brandPanelContent}>
+            <div className={styles.brandHeader}>
+              <div className={styles.brandLogoCircle}>SP</div>
+              <span className={styles.brandLogoText}>Sains POS</span>
+            </div>
+            
+            <div className={styles.brandMain}>
+              <h1>Crafting culinary success, one order at a time.</h1>
+              <p>Experience the most intuitive point-of-sale system designed specifically for modern restaurants, bistros, and cafes.</p>
+            </div>
+            
+            <div className={styles.brandFooter}>
+              <span>&copy; {new Date().getFullYear()} Sains POS. All rights reserved.</span>
+            </div>
+          </div>
         </div>
 
-        <form className={`form-grid ${styles.form}`} onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Username</span>
-            <input
-              autoComplete="username"
-              name="username"
-              onChange={handleChange}
-              required
-              value={form.username}
-            />
-          </label>
+        <div className={styles.formPanel}>
+          <div className={styles.card}>
+            <div className={styles.formHeader}>
+              <h2>Welcome back</h2>
+              <p>Please enter your credentials to access the POS terminal.</p>
+            </div>
 
-          <label className="field">
-            <span>Password</span>
-            <input
-              autoComplete="current-password"
-              name="password"
-              onChange={handleChange}
-              required
-              type="password"
-              value={form.password}
-            />
-          </label>
+            <form className={`form-grid ${styles.form}`} onSubmit={handleSubmit}>
+              <label className="field">
+                <span>Username</span>
+                <input
+                  autoComplete="username"
+                  name="username"
+                  onChange={handleChange}
+                  placeholder="Enter your username"
+                  required
+                  value={form.username}
+                />
+              </label>
 
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+              <label className="field">
+                <span>Password</span>
+                <input
+                  autoComplete="current-password"
+                  name="password"
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  required
+                  type="password"
+                  value={form.password}
+                />
+              </label>
 
-          <button className="primary-button" disabled={isSubmitting} type="submit">
-            {isSubmitting ? 'Signing in...' : 'Login'}
-          </button>
-        </form>
+              {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+
+              <button className="primary-button" disabled={isSubmitting} type="submit">
+                {isSubmitting ? 'Signing in...' : 'Sign In to Terminal'}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     </section>
   );

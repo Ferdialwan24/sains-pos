@@ -20,9 +20,9 @@
   position: relative;
   padding: 22px 20px;
   border-radius: 22px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: linear-gradient(180deg, rgba(248, 252, 255, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
-  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.1);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
   text-align: center;
   cursor: pointer;
   color: inherit;
@@ -32,21 +32,45 @@
     border-color 180ms ease;
 }
 
-.card::after {
-  content: '';
-  display: block;
-  height: 40px;
-  width: 100%;
+.cardOccupiedInfo {
+  display: grid;
+  gap: 2px;
+  margin-top: 10px;
+  align-self: end;
+}
+
+.cardCustomerName {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardTotalAmount {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--color-accent-strong);
+}
+
+.cardAvailableInfo {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-top: 10px;
+  align-self: end;
 }
 
 .cardActive {
-  border-color: rgba(249, 115, 22, 0.18);
-  background: linear-gradient(180deg, rgba(255, 247, 237, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border-color: var(--color-accent);
+  background: linear-gradient(180deg, var(--color-accent-soft) 0%, var(--color-surface-strong) 100%);
 }
 
-.cardActive:hover {
+.card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 30px 64px rgba(15, 23, 42, 0.12);
+  border-color: var(--color-accent);
+  box-shadow: 0 24px 44px var(--color-accent-glow);
 }
 
 .card:disabled {
@@ -74,7 +98,7 @@
   transform: translateY(10px);
   font-size: clamp(2rem, 4vw, 2.6rem);
   line-height: 1;
-  color: #0f172a;
+  color: var(--color-text);
 }
 
 .dialogBody {
@@ -123,9 +147,9 @@
   gap: 10px;
   min-height: 128px;
   padding: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border);
   border-radius: 20px;
-  background: linear-gradient(180deg, rgba(248, 252, 255, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
+  background: var(--color-surface);
   color: inherit;
   text-align: center;
   cursor: pointer;
@@ -137,13 +161,14 @@
 
 .moveCard:hover {
   transform: translateY(-4px);
-  border-color: rgba(14, 165, 233, 0.28);
+  border-color: var(--color-accent);
   box-shadow: 0 22px 44px rgba(15, 23, 42, 0.1);
 }
 
 .moveCardSelected {
-  border-color: rgba(14, 165, 233, 0.4);
-  background: linear-gradient(180deg, rgba(224, 242, 254, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%);
+  border-color: var(--color-accent);
+  background: linear-gradient(180deg, var(--color-accent-soft) 0%, rgba(255, 255, 255, 0.98) 100%);
+  box-shadow: 0 10px 24px var(--color-accent-glow);
 }
 
 .moveCardNumber {
@@ -151,7 +176,7 @@
   place-items: center;
   font-size: clamp(2rem, 4vw, 2.5rem);
   line-height: 1;
-  color: #0f172a;
+  color: var(--color-text);
 }
 
 .moveSelectionText {

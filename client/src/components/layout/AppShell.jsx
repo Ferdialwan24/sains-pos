@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { ConfirmDialog } from '../common/ConfirmDialog.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
@@ -7,20 +7,20 @@ import navLogoImage from '../../assets/nav-logo.png';
 
 const navigationByRole = {
   admin: [
-    { label: 'Dashboard', icon: 'dashboard', path: '/admin/dashboard' },
-    { label: 'Sales Reports', icon: 'reports', path: '/admin/reports' },
-    { label: 'Users', icon: 'users', path: '/admin/users' },
-    { label: 'Tables Management', icon: 'settings', path: '/admin/tables' },
-    { label: 'Products', icon: 'products', path: '/admin/products' },
-    { label: 'Inventory', icon: 'inventory', path: '/admin/inventory' },
-    { label: 'Point of Sale', icon: 'pos', path: '/cashier/pos' },
-    { label: 'Tables', icon: 'tables', path: '/cashier/tables' },
-    { label: 'Transactions', icon: 'transactions', path: '/cashier/transactions' }
+    { section: 'Terminal', label: 'Point of Sale', icon: 'pos', path: '/cashier/pos' },
+    { section: 'Terminal', label: 'Tables', icon: 'tables', path: '/cashier/tables' },
+    { section: 'Terminal', label: 'Transactions', icon: 'transactions', path: '/cashier/transactions' },
+    { section: 'Analytics', label: 'Dashboard', icon: 'dashboard', path: '/admin/dashboard' },
+    { section: 'Analytics', label: 'Sales Reports', icon: 'reports', path: '/admin/reports' },
+    { section: 'Management', label: 'Products', icon: 'products', path: '/admin/products' },
+    { section: 'Management', label: 'Inventory', icon: 'inventory', path: '/admin/inventory' },
+    { section: 'Management', label: 'Tables Management', icon: 'settings', path: '/admin/tables' },
+    { section: 'Management', label: 'Users', icon: 'users', path: '/admin/users' }
   ],
   cashier: [
-    { label: 'Point of Sale', icon: 'pos', path: '/cashier/pos' },
-    { label: 'Tables', icon: 'tables', path: '/cashier/tables' },
-    { label: 'Transactions', icon: 'transactions', path: '/cashier/transactions' }
+    { section: 'Terminal', label: 'Point of Sale', icon: 'pos', path: '/cashier/pos' },
+    { section: 'Terminal', label: 'Tables', icon: 'tables', path: '/cashier/tables' },
+    { section: 'Terminal', label: 'Transactions', icon: 'transactions', path: '/cashier/transactions' }
   ]
 };
 
@@ -107,7 +107,25 @@ export function AppShell() {
   const { showToast } = useToast();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((current) => (current === 'light' ? 'dark' : 'light'));
+  };
   const navigation = navigationByRole[user?.role] ?? [];
+  const groupedNavigation = navigation.reduce((groups, item) => {
+    const sectionName = item.section ?? 'Menu';
+    if (!groups[sectionName]) {
+      groups[sectionName] = [];
+    }
+    groups[sectionName].push(item);
+    return groups;
+  }, {});
   const currentPageTitle = pageTitleByPath[location.pathname] ?? 'Page';
   const pageContentClassName = location.pathname.startsWith('/cashier/pos')
     ? 'page-content page-content-pos'
@@ -155,30 +173,41 @@ export function AppShell() {
           </button>
         </div>
         <nav className="nav-list">
-          {navigation.map((item) => {
-            const isActive = location.pathname === item.path;
+          {Object.entries(groupedNavigation).map(([sectionName, items]) => (
+            <div key={sectionName} className="nav-section">
+              {isSidebarOpen && <span className="nav-section-title">{sectionName}</span>}
+              <div className="nav-section-items">
+                {items.map((item) => {
+                  const isActive = location.pathname === item.path;
 
-            return (
-              <Link
-                key={item.path}
-                aria-label={item.label}
-                className={`nav-link${isActive ? ' nav-link-active' : ''}`}
-                data-tooltip={item.label}
-                onClick={handleNavigationClick}
-                title={!isSidebarOpen ? item.label : undefined}
-                to={item.path}
-              >
-                <NavIcon name={item.icon} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-          
+                  return (
+                    <Link
+                      key={item.path}
+                      aria-label={item.label}
+                      className={`nav-link${isActive ? ' nav-link-active' : ''}`}
+                      data-tooltip={item.label}
+                      onClick={handleNavigationClick}
+                      title={!isSidebarOpen ? item.label : undefined}
+                      to={item.path}
+                    >
+                      <NavIcon name={item.icon} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <strong>{user?.fullName}</strong>
-            <span>{user?.role}</span>
+            <div className="sidebar-user-avatar">
+              {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'US'}
+            </div>
+            <div className="sidebar-user-info">
+              <strong>{user?.fullName}</strong>
+              <span>{user?.role}</span>
+            </div>
           </div>
           <button
             aria-label="Logout"
@@ -223,6 +252,30 @@ export function AppShell() {
           <img alt="Sains POS logo" className="shell-page-logo" src={navLogoImage} />
           <div className="shell-page-title">{currentPageTitle}</div>
           
+          <button
+            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            className="theme-toggle-button"
+            onClick={toggleTheme}
+            type="button"
+          >
+            {theme === 'light' ? (
+              <svg aria-hidden="true" className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            ) : (
+              <svg aria-hidden="true" className="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            )}
+          </button>
         </div>
         <Outlet />
         <ConfirmDialog

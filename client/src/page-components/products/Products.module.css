@@ -40,10 +40,10 @@
   max-width: 100%;
   margin-left: auto;
   padding: 10px 12px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--color-border);
   border-radius: 18px;
-  background: rgba(248, 250, 252, 0.9);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  background: var(--color-surface-soft);
+  box-shadow: var(--shadow-soft);
 }
 
 .searchControl,
@@ -59,9 +59,9 @@
   gap: 10px;
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--color-input-border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--color-input-bg);
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
@@ -70,8 +70,8 @@
 
 .searchControl:focus-within,
 .categoryControl:focus-within {
-  border-color: rgba(30, 167, 253, 0.36);
-  box-shadow: 0 0 0 4px rgba(30, 167, 253, 0.12);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-glow);
 }
 
 .searchIcon {
@@ -94,9 +94,17 @@
   background: transparent;
   padding: 0;
   font-size: 0.92rem;
-  color: #0f172a;
+  color: var(--color-text);
   outline: none;
   box-shadow: none;
+}
+
+.searchControl input:focus,
+.categoryControl select:focus {
+  background: transparent !important;
+  color: var(--color-text) !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .searchControl input::placeholder {
@@ -108,9 +116,9 @@
   align-items: center;
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid var(--color-input-border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--color-input-bg);
 }
 
 .searchField {

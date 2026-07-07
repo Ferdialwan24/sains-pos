@@ -465,22 +465,29 @@ export function POSPageComponent() {
                     value={productSearch}
                   />
                 </label>
-                {hasProductCategories ? (
-                  <label aria-label="Filter category" className={styles.categoryControl}>
-                    <select
-                      onChange={(event) => setProductCategoryFilter(event.target.value)}
-                      value={productCategoryFilter}
-                    >
-                      <option value="">All</option>
-                      {productCategories.map((category) => (
-                        <option key={category._id} value={category._id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
               </div>
+
+              {hasProductCategories ? (
+                <div className={styles.categoryChips}>
+                  <button
+                    className={`${styles.chip} ${!productCategoryFilter ? styles.chipActive : ''}`}
+                    onClick={() => setProductCategoryFilter('')}
+                    type="button"
+                  >
+                    All Categories
+                  </button>
+                  {productCategories.map((category) => (
+                    <button
+                      key={category._id}
+                      className={`${styles.chip} ${productCategoryFilter === category._id ? styles.chipActive : ''}`}
+                      onClick={() => setProductCategoryFilter(category._id)}
+                      type="button"
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
             {isLoading ? <div className="panel">Loading POS data...</div> : null}
             {!isLoading && products.length === 0 ? <div className="panel">No products available yet.</div> : null}
@@ -502,18 +509,20 @@ export function POSPageComponent() {
                     type="button"
                   >
                     <div className={styles.productMedia}>
-                      {quantity > 0 ? <strong className={styles.quantityBadge}>x{quantity}</strong> : null}
+                      {quantity > 0 ? <strong key={quantity} className={styles.quantityBadge}>x{quantity}</strong> : null}
                       <img alt={product.name} src={product.imageDataUrl || DEFAULT_PRODUCT_IMAGE} />
+                      <span className={styles.priceBadge}>{formatCurrency(product.price)}</span>
                     </div>
-                  <div className={styles.productCopy}>
-                    <h3>{product.name}</h3>
-                    <div className={styles.productMetaRow}>
-                      <span className={styles.productStock}>
-                        {product.trackInventory ? `${product.inventoryQuantity ?? 0} ${product.inventoryUnit ?? ''}`.trim() : ''}
-                      </span>
-                      <strong>{formatCurrency(product.price)}</strong>
+                    <div className={styles.productCopy}>
+                      <h3>{product.name}</h3>
+                      {product.trackInventory ? (
+                        <span className={`${styles.stockBadge} ${product.inventoryQuantity <= 5 ? styles.stockLow : ''}`}>
+                          {product.inventoryQuantity === 0 ? 'Out of stock' : `${product.inventoryQuantity} left`}
+                        </span>
+                      ) : (
+                        <span className={styles.stockBadge}>Unlimited</span>
+                      )}
                     </div>
-                  </div>
                 </button>
               );
             })}
@@ -598,7 +607,22 @@ export function POSPageComponent() {
               </div>
 
               <div className={`simple-list compact-list ${styles.orderList}`}>
-                {orderItems.length === 0 ? <p>No items selected yet.</p> : null}
+                {orderItems.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <svg
+                      aria-hidden="true"
+                      className={styles.emptyIcon}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M19 8H5c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2Zm-7 9c-1.38 0-2.5-1.12-2.5-2.5S10.62 12 12 12s2.5 1.12 2.5 2.5S13.38 17 12 17ZM12 3c-2.48 0-4.5 2.02-4.5 4.5v.5h9v-.5C16.5 5.02 14.48 3 12 3Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    <p className={styles.emptyText}>Terminal Ready</p>
+                    <p className={styles.emptySubtext}>Tap products on the left grid to start building the bill.</p>
+                  </div>
+                ) : null}
                 {orderItems.map((item) => (
                   <article key={item.productId} className={`list-row list-row-stack ${styles.orderItem}`}>
                     <div>

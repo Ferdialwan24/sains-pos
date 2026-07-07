@@ -4,6 +4,7 @@ import { FormModal } from '../../components/common/FormModal.jsx';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
+import { formatCurrency } from '../../lib/format.js';
 import styles from './TableBilling.module.css';
 
 export function TableBillingPageComponent() {
@@ -173,8 +174,13 @@ export function TableBillingPageComponent() {
               <button
                 key={table._id}
                 className={`${styles.card}${activeOrder ? ` ${styles.cardActive}` : ''}`}
-                disabled={!activeOrder}
-                onClick={() => openLoadOrderDialog(table)}
+                onClick={() => {
+                  if (activeOrder) {
+                    openLoadOrderDialog(table);
+                  } else {
+                    navigate(`/cashier/pos?tableId=${table._id}`);
+                  }
+                }}
                 type="button"
               >
                 <div className={styles.cardTop}>
@@ -182,6 +188,16 @@ export function TableBillingPageComponent() {
                   <span className={`pill pill-${table.status}`}>{table.status}</span>
                 </div>
                 <strong className={styles.number}>{table.number}</strong>
+                {activeOrder ? (
+                  <div className={styles.cardOccupiedInfo}>
+                    <span className={styles.cardCustomerName}>{activeOrder.customerName || 'No Name'}</span>
+                    <span className={styles.cardTotalAmount}>{formatCurrency(activeOrder.subtotal ?? 0)}</span>
+                  </div>
+                ) : (
+                  <div className={styles.cardAvailableInfo}>
+                    <span>Available</span>
+                  </div>
+                )}
               </button>
             );
           })}
