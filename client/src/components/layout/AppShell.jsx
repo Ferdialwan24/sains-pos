@@ -23,6 +23,7 @@ const navigationByRole = {
     { section: 'Terminal', label: 'Transactions', icon: 'transactions', path: '/cashier/transactions' }
   ]
 };
+navigationByRole.demo = navigationByRole.admin;
 
 function NavIcon({ name }) {
   const icons = {
@@ -206,7 +207,7 @@ export function AppShell() {
             </div>
             <div className="sidebar-user-info">
               <strong>{user?.fullName}</strong>
-              <span>{user?.role}</span>
+              <span>{user?.role === 'demo' ? 'Demo Mode' : user?.role}</span>
             </div>
           </div>
           <button

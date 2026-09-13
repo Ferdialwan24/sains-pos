@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog.jsx';
 import { FormModal } from '../../components/common/FormModal.jsx';
 import { IconButton } from '../../components/common/IconButton.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
@@ -17,6 +18,8 @@ const defaultForm = {
 
 export function UsersPageComponent() {
   const eyebrow = useRoleEyebrow('Admin');
+  const { user: currentUser } = useAuth();
+  const isDemo = currentUser?.role === 'demo';
   const { showToast } = useToast();
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState(defaultForm);
@@ -178,10 +181,26 @@ export function UsersPageComponent() {
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}
 
+      {isDemo ? (
+        <div style={{
+          background: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          color: 'var(--color-text, #ca8a04)',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          marginBottom: '1rem',
+          fontSize: '0.875rem'
+        }}>
+          <strong>Demo Mode:</strong> You can only view users. Creating, editing, and deleting users are disabled.
+        </div>
+      ) : null}
+
       <div className="user-list-section">
-        <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
-          Add User
-        </button>
+        {!isDemo && (
+          <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
+            Add User
+          </button>
+        )}
 
         <div className={`panel ${styles.listPanel}`}>
           <div className="panel-heading user-list-heading">
@@ -196,7 +215,7 @@ export function UsersPageComponent() {
                 <strong>Username</strong>
                 <strong>Role</strong>
                 <strong>Status</strong>
-                <strong>Action</strong>
+                {!isDemo && <strong>Action</strong>}
               </article>
             ) : null}
             {users.map((user) => (
@@ -207,15 +226,17 @@ export function UsersPageComponent() {
                 <span className={`pill ${user.isActive ? 'pill-success' : 'pill-cancel'}`}>
                   {user.isActive ? 'active' : 'inactive'}
                 </span>
-                <div className={`row-actions ${styles.rowActions}`}>
-                  <IconButton icon="edit" label="Edit user" onClick={() => handleEdit(user)} />
-                  <IconButton
-                    icon="delete"
-                    label="Delete user"
-                    onClick={() => setDeletingUser(user)}
-                    variant="danger"
-                  />
-                </div>
+                {!isDemo && (
+                  <div className={`row-actions ${styles.rowActions}`}>
+                    <IconButton icon="edit" label="Edit user" onClick={() => handleEdit(user)} />
+                    <IconButton
+                      icon="delete"
+                      label="Delete user"
+                      onClick={() => setDeletingUser(user)}
+                      variant="danger"
+                    />
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -261,6 +282,7 @@ export function UsersPageComponent() {
             <select name="role" onChange={handleChange} value={form.role}>
               <option value="admin">Admin</option>
               <option value="cashier">Cashier</option>
+              <option value="demo">Demo</option>
             </select>
           </label>
           <label className="toggle-field">

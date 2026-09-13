@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog.jsx';
 import { FormModal } from '../../components/common/FormModal.jsx';
 import { IconButton } from '../../components/common/IconButton.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
@@ -13,6 +14,8 @@ const defaultForm = {
 
 export function TablesManagementPageComponent() {
   const eyebrow = useRoleEyebrow('Admin');
+  const { user: currentUser } = useAuth();
+  const isDemo = currentUser?.role === 'demo';
   const { showToast } = useToast();
   const [tables, setTables] = useState([]);
   const [form, setForm] = useState(defaultForm);
@@ -152,10 +155,26 @@ export function TablesManagementPageComponent() {
 
       {errorMessage && !isModalOpen ? <p className="form-error">{errorMessage}</p> : null}
 
+      {isDemo ? (
+        <div style={{
+          background: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          color: 'var(--color-text, #ca8a04)',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          marginBottom: '1rem',
+          fontSize: '0.875rem'
+        }}>
+          <strong>Demo Mode:</strong> You can only view tables. Creating, editing, and deleting tables are disabled.
+        </div>
+      ) : null}
+
       <div className="user-list-section">
-        <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
-          Add Table
-        </button>
+        {!isDemo && (
+          <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
+            Add Table
+          </button>
+        )}
 
         <div className={`panel ${styles.listPanel}`}>
           <div className="panel-heading user-list-heading">
@@ -174,15 +193,17 @@ export function TablesManagementPageComponent() {
                   <span className={`pill pill-${table.status}`}>{table.status}</span>
                 </div>
                 <strong className={styles.number}>{table.number}</strong>
-                <div className={`row-actions ${styles.rowActions}`}>
-                  <IconButton icon="edit" label="Edit table" onClick={() => handleEdit(table)} />
-                  <IconButton
-                    icon="delete"
-                    label="Delete table"
-                    onClick={() => setDeletingTable(table)}
-                    variant="danger"
-                  />
-                </div>
+                {!isDemo && (
+                  <div className={`row-actions ${styles.rowActions}`}>
+                    <IconButton icon="edit" label="Edit table" onClick={() => handleEdit(table)} />
+                    <IconButton
+                      icon="delete"
+                      label="Delete table"
+                      onClick={() => setDeletingTable(table)}
+                      variant="danger"
+                    />
+                  </div>
+                )}
               </article>
             ))}
           </div>

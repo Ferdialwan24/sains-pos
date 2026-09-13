@@ -14,7 +14,7 @@ export function ProtectedRoute({ allowedRoles = [] }) {
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    const fallbackPath = user.role === 'admin' ? '/admin/dashboard' : '/cashier/pos';
+    const fallbackPath = user.role === 'cashier' ? '/cashier/pos' : '/admin/dashboard';
     return <Navigate to={fallbackPath} replace />;
   }
 

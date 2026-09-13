@@ -11,9 +11,9 @@ import {
 
 export const usersRouter = Router();
 
-usersRouter.use(authenticate, authorize(ROLES.ADMIN));
+usersRouter.use(authenticate);
 
-usersRouter.get('/', listUsersController);
-usersRouter.post('/', createUserController);
-usersRouter.patch('/:userId', updateUserController);
-usersRouter.delete('/:userId', deleteUserController);
+usersRouter.get('/', authorize(ROLES.ADMIN, ROLES.DEMO), listUsersController);
+usersRouter.post('/', authorize(ROLES.ADMIN), createUserController);
+usersRouter.patch('/:userId', authorize(ROLES.ADMIN), updateUserController);
+usersRouter.delete('/:userId', authorize(ROLES.ADMIN), deleteUserController);

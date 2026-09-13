@@ -12,6 +12,7 @@
     "dev:client": "npm run dev --workspace client",
     "build": "npm run build --workspace client",
     "start": "npm run start --workspace server",
-    "seed:admin": "npm run seed:admin --workspace server"
+    "seed:admin": "npm run seed:admin --workspace server",
+    "seed:demo": "npm run seed:demo --workspace server"
   }
 }

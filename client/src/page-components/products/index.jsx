@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog.jsx';
 import { FormModal } from '../../components/common/FormModal.jsx';
 import { IconButton } from '../../components/common/IconButton.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
@@ -63,6 +64,8 @@ const parseDecimalValue = (value) => {
 
 export function ProductsPageComponent() {
   const eyebrow = useRoleEyebrow('Admin');
+  const { user: currentUser } = useAuth();
+  const isDemo = currentUser?.role === 'demo';
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('product');
   const [products, setProducts] = useState([]);
@@ -92,8 +95,13 @@ export function ProductsPageComponent() {
     [editingCategoryId]
   );
   const productListGridTemplate = hasCategories
-    ? 'repeat(6, minmax(0, 1fr))'
-    : 'repeat(5, minmax(0, 1fr))';
+    ? isDemo
+      ? 'repeat(5, minmax(0, 1fr))'
+      : 'repeat(6, minmax(0, 1fr))'
+    : isDemo
+      ? 'repeat(4, minmax(0, 1fr))'
+      : 'repeat(5, minmax(0, 1fr))';
+  const categoryListGridTemplate = isDemo ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))';
 
   const loadProducts = async () => {
     const response = await apiRequest('/products?includeInactive=true');
@@ -449,6 +457,20 @@ export function ProductsPageComponent() {
 
       {errorMessage && !isModalOpen && !isCategoryModalOpen ? <p className="form-error">{errorMessage}</p> : null}
 
+      {isDemo ? (
+        <div style={{
+          background: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          color: 'var(--color-text, #ca8a04)',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          marginBottom: '1rem',
+          fontSize: '0.875rem'
+        }}>
+          <strong>Demo Mode:</strong> You can only view products and categories. Creating, editing, and deleting are disabled.
+        </div>
+      ) : null}
+
       <div className={styles.tabBar}>
         <div className="range-switch">
           {productTabs.map((tab) => (
@@ -467,9 +489,11 @@ export function ProductsPageComponent() {
       {activeTab === 'product' ? (
         <div className="user-list-section">
           <div className={styles.productTopbar}>
-            <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
-              Add Product
-            </button>
+            {!isDemo && (
+              <button className="primary-button section-action-button" onClick={handleOpenCreate} type="button">
+                Add Product
+              </button>
+            )}
             <div className={styles.filterPanel}>
               <div className={styles.productToolbar}>
                 <label aria-label="Search product" className={`${styles.searchControl} ${styles.searchField}`}>
@@ -523,7 +547,7 @@ export function ProductsPageComponent() {
                   {hasCategories ? <strong>Category</strong> : null}
                   <strong>Price</strong>
                   <strong>POS Active</strong>
-                  <strong>Action</strong>
+                  {!isDemo && <strong>Action</strong>}
                 </article>
               ) : null}
               {filteredProducts.map((product) => (
@@ -545,7 +569,7 @@ export function ProductsPageComponent() {
                       aria-label={product.isActive ? 'Hide product from POS' : 'Show product in POS'}
                       aria-pressed={product.isActive}
                       className={`toggle-switch${product.isActive ? ' toggle-switch-active' : ''}`}
-                      disabled={updatingProductId === product._id}
+                      disabled={isDemo || updatingProductId === product._id}
                       onClick={() => handleToggleProductActive(product)}
                       type="button"
                     >
@@ -555,15 +579,17 @@ export function ProductsPageComponent() {
                       {product.isActive ? 'Active' : 'Hidden'}
                     </span>
                   </div>
-                  <div className={`row-actions ${styles.rowActions}`}>
-                    <IconButton icon="edit" label="Edit product" onClick={() => handleEdit(product)} />
-                    <IconButton
-                      icon="delete"
-                      label="Delete product"
-                      onClick={() => setDeletingProduct(product)}
-                      variant="danger"
-                    />
-                  </div>
+                  {!isDemo && (
+                    <div className={`row-actions ${styles.rowActions}`}>
+                      <IconButton icon="edit" label="Edit product" onClick={() => handleEdit(product)} />
+                      <IconButton
+                        icon="delete"
+                        label="Delete product"
+                        onClick={() => setDeletingProduct(product)}
+                        variant="danger"
+                      />
+                    </div>
+                  )}
                 </article>
               ))}
             </div>
@@ -571,9 +597,11 @@ export function ProductsPageComponent() {
         </div>
       ) : (
         <div className={styles.categorySection}>
-          <button className="primary-button section-action-button" onClick={handleOpenCreateCategory} type="button">
-            Add Category
-          </button>
+          {!isDemo && (
+            <button className="primary-button section-action-button" onClick={handleOpenCreateCategory} type="button">
+              Add Category
+            </button>
+          )}
 
           <div className={`panel ${styles.listPanel} ${styles.categoryListPanel}`}>
             <div className="panel-heading user-list-heading">
@@ -585,34 +613,36 @@ export function ProductsPageComponent() {
               {categories.length > 0 ? (
                 <article
                   className={`report-row report-row-header ${styles.categoryListRow} ${styles.categoryRow} ${styles.categoryRowHeader}`}
-                  style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+                  style={{ gridTemplateColumns: categoryListGridTemplate }}
                 >
                   <strong>Category Name</strong>
-                  <strong>Action</strong>
+                  {!isDemo && <strong>Action</strong>}
                 </article>
               ) : null}
               {categories.map((category) => (
                 <article
                   key={category._id}
                   className={`report-row ${styles.categoryListRow} ${styles.categoryRow}`}
-                  style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
+                  style={{ gridTemplateColumns: categoryListGridTemplate }}
                 >
                   <strong className={styles.categoryNameCell}>{category.name}</strong>
-                  <div className={styles.categoryActionCell}>
-                    <div className={styles.categoryActionGroup}>
-                      <IconButton
-                        icon="edit"
-                        label="Edit category"
-                        onClick={() => handleEditCategory(category)}
-                      />
-                      <IconButton
-                        icon="delete"
-                        label="Delete category"
-                        onClick={() => setDeletingCategory(category)}
-                        variant="danger"
-                      />
+                  {!isDemo && (
+                    <div className={styles.categoryActionCell}>
+                      <div className={styles.categoryActionGroup}>
+                        <IconButton
+                          icon="edit"
+                          label="Edit category"
+                          onClick={() => handleEditCategory(category)}
+                        />
+                        <IconButton
+                          icon="delete"
+                          label="Delete category"
+                          onClick={() => setDeletingCategory(category)}
+                          variant="danger"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </article>
               ))}
             </div>

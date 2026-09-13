@@ -1,6 +1,7 @@
 export const ROLES = {
   ADMIN: 'admin',
-  CASHIER: 'cashier'
+  CASHIER: 'cashier',
+  DEMO: 'demo'
 };
 
 export const ROLE_VALUES = Object.values(ROLES);

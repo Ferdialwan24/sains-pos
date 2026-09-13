@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FormModal } from '../../components/common/FormModal.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 import { useRoleEyebrow } from '../../hooks/useRoleEyebrow.js';
 import { useToast } from '../../hooks/useToast.js';
 import { apiRequest } from '../../lib/api.js';
@@ -15,6 +16,8 @@ const defaultForm = {
 
 export function InventoryPageComponent() {
   const eyebrow = useRoleEyebrow('Admin');
+  const { user: currentUser } = useAuth();
+  const isDemo = currentUser?.role === 'demo';
   const { showToast } = useToast();
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(defaultForm);
@@ -119,10 +122,26 @@ export function InventoryPageComponent() {
         </div>
       </div>
 
+      {isDemo ? (
+        <div style={{
+          background: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          color: 'var(--color-text, #ca8a04)',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          marginBottom: '1rem',
+          fontSize: '0.875rem'
+        }}>
+          <strong>Demo Mode:</strong> You can only view inventory. Adding stock is disabled.
+        </div>
+      ) : null}
+
       <div className="user-list-section">
-        <button className="primary-button section-action-button" onClick={() => setIsModalOpen(true)} type="button">
-          Add Stock
-        </button>
+        {!isDemo && (
+          <button className="primary-button section-action-button" onClick={() => setIsModalOpen(true)} type="button">
+            Add Stock
+          </button>
+        )}
       </div>
 
       <div className="panel">

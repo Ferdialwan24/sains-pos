@@ -2,7 +2,8 @@ import { useAuth } from './useAuth.js';
 
 const roleLabels = {
   admin: 'Admin',
-  cashier: 'Cashier'
+  cashier: 'Cashier',
+  demo: 'Demo'
 };
 
 export const useRoleEyebrow = (fallback = 'User') => {

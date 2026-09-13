@@ -24,7 +24,7 @@ function HomeRedirect() {
     return <Navigate to="/login" replace />;
   }
 
-  return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/cashier/pos'} replace />;
+  return <Navigate to={user.role === 'cashier' ? '/cashier/pos' : '/admin/dashboard'} replace />;
 }
 
 export default function App() {
@@ -34,13 +34,13 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
-          <Route element={<ProtectedRoute allowedRoles={['cashier', 'admin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['cashier', 'admin', 'demo']} />}>
             <Route path="/cashier/pos" element={<PosPage />} />
             <Route path="/cashier/tables" element={<TableBillingPage />} />            
             <Route path="/cashier/transactions" element={<TransactionsPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'demo']} />}>
             <Route path="/admin/dashboard" element={<DashboardPage />} />
             <Route path="/admin/users" element={<UsersPage />} />
             <Route path="/admin/tables" element={<TablesPage />} />
