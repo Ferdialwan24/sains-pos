@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
 import { useToast } from '../../hooks/useToast.js';
+import navLogoImage from '../../assets/nav-logo.png';
 import styles from './Login.module.css';
 
 export function LoginPageComponent() {
@@ -62,11 +63,6 @@ export function LoginPageComponent() {
       <div className={styles.container}>
         <div className={styles.brandPanel}>
           <div className={styles.brandPanelContent}>
-            <div className={styles.brandHeader}>
-              <div className={styles.brandLogoCircle}>SP</div>
-              <span className={styles.brandLogoText}>Sains POS</span>
-            </div>
-            
             <div className={styles.brandMain}>
               <h1>Crafting culinary success, one order at a time.</h1>
               <p>Experience the most intuitive point-of-sale system designed specifically for modern restaurants, bistros, and cafes.</p>
@@ -81,6 +77,9 @@ export function LoginPageComponent() {
         <div className={styles.formPanel}>
           <div className={styles.card}>
             <div className={styles.formHeader}>
+              <div className={styles.formLogoWrap}>
+                <img alt="Sains POS logo" className={styles.formLogo} src={navLogoImage} />
+              </div>
               <h2>Welcome back</h2>
               <p>Please enter your credentials to access the POS terminal.</p>
             </div>
